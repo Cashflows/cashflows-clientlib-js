@@ -1,0 +1,28 @@
+{
+ "name": "cashflows-clientlib-js",
+ "version": "1.0.0",
+ "description": "Cashflows Client Library for JavaScript",
+ "main": "dist/cashflows-clientlib.js",
+ "scripts": {
+  "test": "mocha ./test/**/*.test.js",
+  "prebuild": "rmdir dist /s /q",
+  "build": "parcel build src/cashflows.js",
+  "serve": "parcel src/index.html --https --public-url /"
+ },
+ "repository": {
+  "type": "git",
+  "url": "git+https://github.com/cashflows/cashflows-clientlib-js.git"
+ },
+ "keywords": [
+  "cashflows",
+  "payment",
+  "card",
+  "secure"
+ ],
+ "author": "Cashflows <tech@cashflows.com> (https://www.cashflows.com)",
+ "license": "MIT",
+ "devDependencies": {
+  "mocha": "^10.0.0",
+  "parcel": "^2.6.0"
+ }
+}

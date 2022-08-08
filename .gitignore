@@ -1,0 +1,7 @@
+.parcel-cache
+node_modules
+dist
+build
+.DS_Store
+NOTES.mdown
+TODO.mdown

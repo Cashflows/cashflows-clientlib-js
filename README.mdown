@@ -1,0 +1,37 @@
+# Cashflows Client Library for JS #
+
+## Installation ##
+
+The Cashflows Client Library for JS is installed via [NPM](https://www.npmjs.com/). To install, simply add it
+to your `package.json` file:
+
+```json
+{
+    "require": {
+        "cashflows/cashflows-clientlib-js": "~1.0.0"
+    }
+}
+```
+
+And run npm to update your dependencies:
+
+    $ npm install
+
+You may also git clone or [download the files manually](https://github.com/cashflows/cashflows-clientlib-js/releases), and include the client library in your project.
+
+## Basic Usage ##
+
+```javascript
+    TBC
+```
+
+## Support ##
+
+If you believe you have found a bug, please report it using the [GitHub issue tracker](https://github.com/cashflows/cashflows-clientlib-js/issues) or
+contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows.com?subject=cashflows-clientlib-js%20Support).
+
+## Changelog ##
+
+### v1.0.0 ###
+
+* First public release.
