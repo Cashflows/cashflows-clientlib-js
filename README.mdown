@@ -13,8 +13,8 @@ to your `package.json` file:
 
 ```json
 {
-    "require": {
-        "cashflows/cashflows-clientlib-js": "~1.0.0"
+    "dependencies": {
+        "cashflows-clientlib-js": "^1.0.0"
     }
 }
 ```
