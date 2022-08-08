@@ -238,3 +238,5 @@ function Cashflows(intentToken, isIntegration) {
 		});
 	}
 }
+
+module.exports = Cashflows
