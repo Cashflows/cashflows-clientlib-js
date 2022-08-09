@@ -1,6 +1,6 @@
 {
  "name": "cashflows-clientlib-js",
- "version": "1.0.15",
+ "version": "1.0.16",
  "description": "Cashflows Client Library for JavaScript",
  "main": "dist/cashflows-clientlib.js",
  "scripts": {
