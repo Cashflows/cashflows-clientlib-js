@@ -61,11 +61,10 @@ stages:
         displayName: Tag Pipeline
 
 - ${{ if eq(variables['createRelease'], 'True') }}:
-# https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/github-release?view=azure-devops
-  - stage: Release
+  - stage: Prepare
     dependsOn: Build
     jobs:
-    - job: ReleaseGitHub
+    - job: CheckVersion
       variables:
         revision: $[ counter(variables['releaseVersionMajorMinor' ], 1)]
         version: ${{ variables['releaseVersionMajorMinor'] }}.$(revision)
@@ -74,6 +73,7 @@ stages:
         artifact: dist
       - task: PowerShell@2
         displayName: 'Check Version'
+        name: CheckVersion
         inputs:
           targetType: 'inline'
           script: |
@@ -86,25 +86,42 @@ stages:
               Write-Error "Pipeline version does not match package.json version. Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}."( $(revision) + 1 )" and try again."
               exit 1
             }
+
+            Write-Host "##vso[task.setvariable variable=version;isOutput=true]$(version)"
+  - stage: Release
+    dependsOn: Prepare
+    jobs:
+    - job: ReleaseGitHub
+      variables:
+        version: $[ dependencies.Prepare.outputs['CheckVersion.version']]
+      steps:
       - download: current
         artifact: dist
-      - task: GitHubRelease@0
-        displayName: 'Create GitHub Release'
+      - task: PowerShell@2
+        displayName: 'Check Version'
         inputs:
-          gitHubConnection: cashflows-public-Core
-          repositoryName: 'cashflows/cashflows-clientlib-js'
-          action: 'create'
-          title: Release $(version)
-          tagSource: manual
-          tag: release-v$(version)
-          assets: |
-            $(Pipeline.Workspace)/dist/**
-      - task: Npm@1
-        inputs:
-          command: publish
-          publishRegistry: useExternalRegistry
-          publishEndpoint: 'npmjs-public-Core'
-      - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
-        displayName: Tag Pipeline
-      - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
-        displayName: Tag Pipeline
+          targetType: 'inline'
+          script: |
+            echo "Version from pipeline: $(version)"
+      # - download: current
+      #   artifact: dist
+      # - task: GitHubRelease@0
+      #   displayName: 'Create GitHub Release'
+      #   inputs:
+      #     gitHubConnection: cashflows-public-Core
+      #     repositoryName: 'cashflows/cashflows-clientlib-js'
+      #     action: 'create'
+      #     title: Release $(version)
+      #     tagSource: manual
+      #     tag: release-v$(version)
+      #     assets: |
+      #       $(Pipeline.Workspace)/dist/**
+      # - task: Npm@1
+      #   inputs:
+      #     command: publish
+      #     publishRegistry: useExternalRegistry
+      #     publishEndpoint: 'npmjs-public-Core'
+      # - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
+      #   displayName: Tag Pipeline
+      # - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
+      #   displayName: Tag Pipeline
