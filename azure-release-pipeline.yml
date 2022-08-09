@@ -58,21 +58,19 @@ stages:
         version: ${{ variables['releaseVersionMajorMinor'] }}.$(revision)
       steps:
       - task: PowerShell@2
-        displayName: 'Print and export version number'
+        displayName: 'Print Version'
         name: Version
         inputs:
           targetType: 'inline'
           script: |
             echo "Version: $(version)"
-            Write-Host "##vso[task.setvariable variable=version;isOutput=true]$(version)"
-
-      # - task: GitHubRelease@0
-      #   displayName: 'Create GitHub Release'
-      #   inputs:
-      #     gitHubConnection: tbc
-      #     repositoryName: 'cashflows/cashflows-clientlib-js'
-      #     action: 'create'
-      #     tagSource: manual
-      #     tag: release-v$[ dependencies.BuildVersion.outputs['Version.shortNumber'] ]
-      #     assets: |
-      #       $(Build.ArtifactStagingDirectory)/dist/cashflows-clientlib.js
+      - task: GitHubRelease@0
+        displayName: 'Create GitHub Release'
+        inputs:
+          gitHubConnection: cashflows-public-Core
+          repositoryName: 'cashflows/cashflows-clientlib-js'
+          action: 'create'
+          tagSource: manual
+          tag: release-v$(version)
+          assets: |
+            $(Build.ArtifactStagingDirectory)/dist/cashflows-clientlib.js
