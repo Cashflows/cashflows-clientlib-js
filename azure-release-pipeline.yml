@@ -5,28 +5,70 @@ trigger:
 
 pool: "Cashflows RHEL8 Pool"
 
-resources:
-  repositories:
-    - repository: templates
-      type: github
-      endpoint: ichequenetwork-Core
-      name: ichequenetwork/devops-core     
-
 parameters:
-  - name: Release
-    displayName: Create GitHub Release
-    type: boolean
-    default: false
+- name: createRelease
+  displayName: Create GitHub Release
+  type: boolean
+  default: false
 
 variables:
   ${{ if eq(variables['Build.Reason'], 'Manual') }}:
-    Release: ${{ parameters.Release }}
+    createRelease: ${{ parameters.createRelease }}
   ${{ else }}:
-    Release: true
+    createRelease: true
+  nodeVersion: '14.x'
 
 stages:
 - stage: Build
   jobs:
-  - template: Templates/template-build-version.yml@templates
-    parameters:
-      versionMajorMinor: '1.0'
+  - job: InstallNpm
+    steps:
+    - task: NodeTool@0 
+      displayName: 'Install Node ${{ variables.nodeVersion }}'
+      inputs:
+        versionSpec: '${{ variables.nodeVersion }}'
+    - task: Npm@1
+      displayName: 'Npm Install'
+      inputs:
+        command: 'install'
+    - task: Npm@1
+      displayName: 'Npm Version'
+      inputs:
+        command: 'custom'
+        customCommand: 'version'
+  - job: BuildNpm
+    steps:
+    - task: Npm@1
+      displayName: 'Npm Build'
+      inputs:
+        command: 'custom'
+        customCommand: 'run build'
+  - job: TestNpm
+    steps:
+    - task: Npm@1
+      displayName: 'Npm Test'
+      inputs:
+        command: 'custom'
+        customCommand: 'run test'
+
+- ${{ if eq(variables['createRelease'], 'True') }}:
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/github-release?view=azure-devops
+  - stage: Release
+    jobs:
+    - template: Templates/template-build-version.yml@templates
+      parameters:
+        versionMajorMinor: '1.0'
+    - job: ReleaseGitHub
+      dependsOn: 
+        - BuildVersion
+      steps:
+      - task: GitHubRelease@0
+        displayName: 'Create GitHub Release'
+        inputs:
+          gitHubConnection: tbc
+          repositoryName: 'cashflows/cashflows-clientlib-js'
+          action: 'create'
+          tagSource: manual
+          tag: 'release-v$[ dependencies.BuildVersion.outputs['Version.shortNumber'] ]'
+          assets: |
+            $(Build.ArtifactStagingDirectory)/dist/cashflows-clientlib.js
