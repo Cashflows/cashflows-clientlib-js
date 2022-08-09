@@ -114,7 +114,7 @@ stages:
           action: 'create'
           title: Release $(version)
           tagSource: manual
-          tag: release-v$(version)
+          tag: release-$(version)
           assets: |
             $(Pipeline.Workspace)/dist/**
       - task: Npm@1
