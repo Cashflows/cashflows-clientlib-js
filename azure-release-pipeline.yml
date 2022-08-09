@@ -61,7 +61,7 @@ stages:
         displayName: Tag Pipeline
 
 - ${{ if eq(variables['createRelease'], 'True') }}:
-  - stage: Prepare
+  - stage: Validate
     dependsOn: Build
     jobs:
     - job: CheckVersion
@@ -81,7 +81,7 @@ stages:
             $packageJson = Get-Content -Path $(Build.SourcesDirectory)/package.json | ConvertFrom-Json
             Write-Host Version from package.json: $packageJson.version
 
-            if($(version) -ne $packageJson.version)
+            if(-not ($(version).Equals($packageJson.version)))
             {
               Write-Error "Pipeline version does not match package.json version. Remember that the next pipeline run will increment the version revision number again."
               exit 1
