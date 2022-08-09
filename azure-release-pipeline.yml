@@ -23,7 +23,7 @@ variables:
   ${{ if eq(variables['Build.Reason'], 'Manual') }}:
     createRelease: ${{ parameters.createRelease }}
   ${{ else }}:
-    createRelease: true
+    createRelease: false
   nodeVersion: '14.x'
   releaseVersionMajorMinor: '1.0'
 
