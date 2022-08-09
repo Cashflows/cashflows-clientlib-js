@@ -98,7 +98,7 @@ stages:
     jobs:
     - job: Release
       variables:
-        version: $[ dependencies.Validate.outputs['CheckVersion.version']]
+        version: $[ dependencies.Validate.outputs['CheckVersion.CheckVersion.version']]
       steps:
       - download: current
         artifact: dist
