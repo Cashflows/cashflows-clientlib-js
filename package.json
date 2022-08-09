@@ -5,7 +5,6 @@
  "main": "dist/cashflows-clientlib.js",
  "scripts": {
   "test": "mocha ./test/**/*.test.js",
-  "prebuild": "rmdir dist /s /q",
   "build": "parcel build src/cashflows.js",
   "serve": "parcel src/index.html --https --public-url /"
  },
