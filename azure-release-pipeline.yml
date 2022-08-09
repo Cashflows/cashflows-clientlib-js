@@ -56,6 +56,9 @@ stages:
       - publish: '$(Build.ArtifactStagingDirectory)/dist'
         displayName: 'Publish Dist Folder'
         artifact: dist
+    - ${{ else }}:
+      - pwsh: Write-Host "##vso[build.addbuildtag]non-release-build"
+        displayName: Tag Pipeline
 
 - ${{ if eq(variables['createRelease'], 'True') }}:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/github-release?view=azure-devops
@@ -87,3 +90,7 @@ stages:
           tag: release-v$(version)
           assets: |
             $(Pipeline.Workspace)/dist/**
+      - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
+        displayName: Tag Pipeline
+      - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
+        displayName: Tag Pipeline
