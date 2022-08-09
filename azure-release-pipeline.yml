@@ -69,6 +69,6 @@ stages:
           repositoryName: 'cashflows/cashflows-clientlib-js'
           action: 'create'
           tagSource: manual
-          tag: 'release-v$[ dependencies.BuildVersion.outputs['Version.shortNumber'] ]'
+          tag: release-v$[ dependencies.BuildVersion.outputs['Version.shortNumber'] ]
           assets: |
             $(Build.ArtifactStagingDirectory)/dist/cashflows-clientlib.js
