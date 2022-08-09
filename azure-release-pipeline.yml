@@ -89,7 +89,7 @@ stages:
 
             Write-Host "##vso[task.setvariable variable=version;isOutput=true]$(version)"
   - stage: Release
-    dependsOn: Prepare
+    dependsOn: Validate
     jobs:
     - job: ReleaseGitHub
       variables:
