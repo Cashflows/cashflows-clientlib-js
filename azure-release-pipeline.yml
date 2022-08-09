@@ -83,9 +83,9 @@ stages:
 
             if($(version) -ne $packageJson.version)
             {
-              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}.${{ $(revision) + 1 }}"
+              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}." ( $(revision) + 1 ) " and try again."
               Write-Error "Pipeline version does not match package.json version."
-              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}.${{ $(revision) + 1 }}"
+              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}." ( $(revision) + 1 ) " and try again."
               exit 1
             }
 
