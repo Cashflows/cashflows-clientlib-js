@@ -77,14 +77,16 @@ stages:
         inputs:
           targetType: 'inline'
           script: |
-            echo "Version from pipeline: $(version)"
+            $pipelineVersion = "$(version)"
             $packageJson = Get-Content -Path $(Build.SourcesDirectory)/package.json | ConvertFrom-Json
             $packageJsonVersion = $packageJson.version
-            Write-Host Version from package.json: $(packageJsonVersion)
 
-            if($(version) -ne $(packageJsonVersion))
+            Write-Host Version from pipeline: $pipelineVersion
+            Write-Host Version from package.json: $packageJsonVersion
+
+            if($pipelineVersion -ne $packageJsonVersion)
             {
-              Write-Error "Pipeline version $(version) does not match package.json version $(packageJsonVersion). Remember that the next pipeline run will increment the version revision number again."
+              Write-Error "Pipeline version $pipelineVersion does not match package.json version $packageJsonVersion. Remember that the next pipeline run will increment the version revision number again."
               exit 1
             }
 
