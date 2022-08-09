@@ -79,12 +79,13 @@ stages:
           script: |
             echo "Version from pipeline: $(version)"
             $packageJson = Get-Content -Path $(Build.SourcesDirectory)/package.json | ConvertFrom-Json
-            Write-Host Version from package.json $packageJson.version
+            Write-Host Version from package.json: $packageJson.version
 
             if($(version) -ne $packageJson.version)
             {
+              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}.${{ $(revision) + 1 }}"
               Write-Error "Pipeline version does not match package.json version."
-              Write-Host "Remember that the next pipeline run will increment the version number again."
+              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}.${{ $(revision) + 1 }}"
               exit 1
             }
 
