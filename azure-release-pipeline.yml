@@ -1,0 +1,32 @@
+trigger:
+  branches:
+    include:
+      - refs/tags/release
+
+pool: "Cashflows RHEL8 Pool"
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      endpoint: ichequenetwork-Core
+      name: ichequenetwork/devops-core     
+
+parameters:
+  - name: Release
+    displayName: Create GitHub Release
+    type: boolean
+    default: false
+
+variables:
+  ${{ if eq(variables['Build.Reason'], 'Manual') }}:
+    Release: ${{ parameters.Release }}
+  ${{ else }}:
+    Release: true
+
+stages:
+- stage: Build
+  jobs:
+  - template: Templates/template-build-version.yml@templates
+    parameters:
+      versionMajorMinor: '1.0'
