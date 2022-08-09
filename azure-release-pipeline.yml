@@ -1,9 +1,3 @@
-trigger:
-  batch: true
-  branches:
-    include:
-    - main
-
 pr:
   autoCancel: false
   drafts: false
