@@ -17,6 +17,7 @@ variables:
   ${{ else }}:
     createRelease: true
   nodeVersion: '14.x'
+  releaseVersionMajorMinor: '1.0'
 
 stages:
 - stage: Build
@@ -51,20 +52,27 @@ stages:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/github-release?view=azure-devops
   - stage: Release
     jobs:
-    - template: Templates/template-build-version.yml@templates
-      parameters:
-        versionMajorMinor: '1.0'
     - job: ReleaseGitHub
-      dependsOn: 
-        - BuildVersion
+      variables:
+        revision: $[ counter(variables['releaseVersionMajorMinor' ], 1)]
+        version: '$[ variables['releaseVersionMajorMinor'] ].$(revision)'      
       steps:
-      - task: GitHubRelease@0
-        displayName: 'Create GitHub Release'
+      - task: PowerShell@2
+        displayName: 'Print and export version number'
+        name: Version
         inputs:
-          gitHubConnection: tbc
-          repositoryName: 'cashflows/cashflows-clientlib-js'
-          action: 'create'
-          tagSource: manual
-          tag: release-v$[ dependencies.BuildVersion.outputs['Version.shortNumber'] ]
-          assets: |
-            $(Build.ArtifactStagingDirectory)/dist/cashflows-clientlib.js
+          targetType: 'inline'
+          script: |
+            echo "Version: $(version)"
+            Write-Host "##vso[task.setvariable variable=version;isOutput=true]$(version)"
+
+      # - task: GitHubRelease@0
+      #   displayName: 'Create GitHub Release'
+      #   inputs:
+      #     gitHubConnection: tbc
+      #     repositoryName: 'cashflows/cashflows-clientlib-js'
+      #     action: 'create'
+      #     tagSource: manual
+      #     tag: release-v$[ dependencies.BuildVersion.outputs['Version.shortNumber'] ]
+      #     assets: |
+      #       $(Build.ArtifactStagingDirectory)/dist/cashflows-clientlib.js
