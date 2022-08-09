@@ -113,22 +113,22 @@ stages:
           targetType: 'inline'
           script: |
             echo "Version: $(version)"
-      # - task: GitHubRelease@0
-      #   displayName: 'Release to GitHub'
-      #   inputs:
-      #     gitHubConnection: cashflows-public-Core
-      #     repositoryName: 'cashflows/cashflows-clientlib-js'
-      #     action: 'create'
-      #     title: Release $(version)
-      #     tagSource: manual
-      #     tag: release-$(version)
-      #     assets: |
-      #       $(Pipeline.Workspace)/dist/**
-      # - task: Npm@1
-      #   displayName: 'Release to NpmJs'
-      #   inputs:
-      #     command: publish
-      #     publishRegistry: useExternalRegistry
-      #     publishEndpoint: 'npmjs-public-Core'
-      # - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
-      #   displayName: Tag Pipeline
+      - task: GitHubRelease@0
+        displayName: 'Release to GitHub'
+        inputs:
+          gitHubConnection: cashflows-public-Core
+          repositoryName: 'cashflows/cashflows-clientlib-js'
+          action: 'create'
+          title: Release $(version)
+          tagSource: manual
+          tag: release-$(version)
+          assets: |
+            $(Pipeline.Workspace)/dist/**
+      - task: Npm@1
+        displayName: 'Release to NpmJs'
+        inputs:
+          command: publish
+          publishRegistry: useExternalRegistry
+          publishEndpoint: 'npmjs-public-Core'
+      - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
+        displayName: Tag Pipeline
