@@ -47,10 +47,20 @@ stages:
       inputs:
         command: 'custom'
         customCommand: 'run test'
+    - ${{ if eq(variables['createRelease'], 'True') }}:
+      - task: CopyFiles@2
+        displayName: 'Copy Dist Folder'
+        inputs:
+          contents: 'dist/**'
+          targetFolder: '$(Build.ArtifactStagingDirectory)'
+      - publish: '$(Build.ArtifactStagingDirectory)/dist'
+        displayName: 'Publish Dist Folder'
+        artifact: dist
 
 - ${{ if eq(variables['createRelease'], 'True') }}:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/utility/github-release?view=azure-devops
   - stage: Release
+    dependsOn: Build
     jobs:
     - job: ReleaseGitHub
       variables:
@@ -64,13 +74,16 @@ stages:
           targetType: 'inline'
           script: |
             echo "Version: $(version)"
+      - download: current
+        artifact: dist
       - task: GitHubRelease@0
         displayName: 'Create GitHub Release'
         inputs:
           gitHubConnection: cashflows-public-Core
           repositoryName: 'cashflows/cashflows-clientlib-js'
           action: 'create'
+          title: Release $(version)
           tagSource: manual
           tag: release-v$(version)
           assets: |
-            $(Build.ArtifactStagingDirectory)/dist/cashflows-clientlib.js
+            $(Pipeline.Workspace)/dist/**
