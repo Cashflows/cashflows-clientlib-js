@@ -1,7 +1,15 @@
 trigger:
+  batch: true
   branches:
     include:
-      - refs/tags/release
+    - main
+
+pr:
+  autoCancel: false
+  drafts: false
+  branches:
+    include:
+    - main
 
 pool: "Cashflows RHEL8 Pool"
 
