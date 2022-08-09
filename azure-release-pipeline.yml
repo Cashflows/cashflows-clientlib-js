@@ -83,7 +83,7 @@ stages:
 
             if($(version) -ne $packageJson.version)
             {
-              Write-Error "Pipeline version does not match package.json version. Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}."( $(revision) + 1 )" and try again."
+              Write-Error "Pipeline version does not match package.json version. Remember that the next pipeline run will increment the version revision number again."
               exit 1
             }
 
@@ -97,6 +97,10 @@ stages:
       steps:
       - download: current
         artifact: dist
+      - task: NodeTool@0 
+        displayName: 'Install Node ${{ variables.nodeVersion }}'
+        inputs:
+          versionSpec: '${{ variables.nodeVersion }}'
       - task: PowerShell@2
         displayName: 'Check Version'
         inputs:
