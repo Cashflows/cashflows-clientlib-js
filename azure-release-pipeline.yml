@@ -70,27 +70,35 @@ stages:
         revision: $[ counter(variables['releaseVersionMajorMinor' ], 1)]
         version: ${{ variables['releaseVersionMajorMinor'] }}.$(revision)
       steps:
+      - download: current
+        artifact: dist
       - task: PowerShell@2
-        displayName: 'Print Version'
-        name: Version
+        displayName: 'Check Version'
         inputs:
           targetType: 'inline'
           script: |
-            echo "Version: $(version)"
-      - download: current
-        artifact: dist
-      - task: GitHubRelease@0
-        displayName: 'Create GitHub Release'
-        inputs:
-          gitHubConnection: cashflows-public-Core
-          repositoryName: 'cashflows/cashflows-clientlib-js'
-          action: 'create'
-          title: Release $(version)
-          tagSource: manual
-          tag: release-v$(version)
-          assets: |
-            $(Pipeline.Workspace)/dist/**
-      - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
-        displayName: Tag Pipeline
-      - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
-        displayName: Tag Pipeline
+            echo "Version from Pipeline: $(version)"
+            $packageJson = Get-Content -Path $(Build.SourcesDirectory)/package.json | ConvertFrom-Json
+            Write-Host Version from package.json $packageJson.version
+      # - download: current
+      #   artifact: dist
+      # - task: GitHubRelease@0
+      #   displayName: 'Create GitHub Release'
+      #   inputs:
+      #     gitHubConnection: cashflows-public-Core
+      #     repositoryName: 'cashflows/cashflows-clientlib-js'
+      #     action: 'create'
+      #     title: Release $(version)
+      #     tagSource: manual
+      #     tag: release-v$(version)
+      #     assets: |
+      #       $(Pipeline.Workspace)/dist/**
+      # - task: Npm@1
+      #   inputs:
+      #     command: publish
+      #     publishRegistry: useExternalRegistry
+      #     publishEndpoint: 'npmjs-public-Core'
+      # - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
+      #   displayName: Tag Pipeline
+      # - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
+      #   displayName: Tag Pipeline
