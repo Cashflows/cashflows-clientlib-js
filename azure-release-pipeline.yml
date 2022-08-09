@@ -21,7 +21,7 @@ variables:
 stages:
 - stage: Build
   jobs:
-  - job: InstallNpm
+  - job: BuildAndTest
     steps:
     - task: NodeTool@0 
       displayName: 'Install Node ${{ variables.nodeVersion }}'
@@ -36,19 +36,11 @@ stages:
       inputs:
         command: 'custom'
         customCommand: 'version'
-  - job: BuildNpm
-    dependsOn:
-      - InstallNpm
-    steps:
     - task: Npm@1
       displayName: 'Npm Build'
       inputs:
         command: 'custom'
         customCommand: 'run build'
-  - job: TestNpm
-    dependsOn:
-      - BuildNpm
-    steps:
     - task: Npm@1
       displayName: 'Npm Test'
       inputs:
