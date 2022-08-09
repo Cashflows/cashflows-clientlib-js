@@ -83,32 +83,28 @@ stages:
 
             if($(version) -ne $packageJson.version)
             {
-              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}." ( $(revision) + 1 ) " and try again."
-              Write-Error "Pipeline version does not match package.json version."
-              Write-Host "Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}." ( $(revision) + 1 ) " and try again."
+              Write-Error "Pipeline version does not match package.json version. Remember that the next pipeline run will increment the version number again. Set the package.json version to ${{ variables['releaseVersionMajorMinor' ] }}."( $(revision) + 1 )" and try again."
               exit 1
             }
-
-
-      # - download: current
-      #   artifact: dist
-      # - task: GitHubRelease@0
-      #   displayName: 'Create GitHub Release'
-      #   inputs:
-      #     gitHubConnection: cashflows-public-Core
-      #     repositoryName: 'cashflows/cashflows-clientlib-js'
-      #     action: 'create'
-      #     title: Release $(version)
-      #     tagSource: manual
-      #     tag: release-v$(version)
-      #     assets: |
-      #       $(Pipeline.Workspace)/dist/**
-      # - task: Npm@1
-      #   inputs:
-      #     command: publish
-      #     publishRegistry: useExternalRegistry
-      #     publishEndpoint: 'npmjs-public-Core'
-      # - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
-      #   displayName: Tag Pipeline
-      # - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
-      #   displayName: Tag Pipeline
+      - download: current
+        artifact: dist
+      - task: GitHubRelease@0
+        displayName: 'Create GitHub Release'
+        inputs:
+          gitHubConnection: cashflows-public-Core
+          repositoryName: 'cashflows/cashflows-clientlib-js'
+          action: 'create'
+          title: Release $(version)
+          tagSource: manual
+          tag: release-v$(version)
+          assets: |
+            $(Pipeline.Workspace)/dist/**
+      - task: Npm@1
+        inputs:
+          command: publish
+          publishRegistry: useExternalRegistry
+          publishEndpoint: 'npmjs-public-Core'
+      - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
+        displayName: Tag Pipeline
+      - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
+        displayName: Tag Pipeline
