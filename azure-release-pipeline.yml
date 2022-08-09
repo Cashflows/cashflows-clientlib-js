@@ -55,7 +55,7 @@ stages:
     - job: ReleaseGitHub
       variables:
         revision: $[ counter(variables['releaseVersionMajorMinor' ], 1)]
-        version: $[ variables['releaseVersionMajorMinor'] ].$(revision)
+        version: ${{ variables['releaseVersionMajorMinor'] }}.$(revision)
       steps:
       - task: PowerShell@2
         displayName: 'Print and export version number'
