@@ -37,6 +37,8 @@ stages:
         command: 'custom'
         customCommand: 'version'
   - job: BuildNpm
+    dependsOn:
+      - InstallNpm
     steps:
     - task: Npm@1
       displayName: 'Npm Build'
@@ -44,6 +46,8 @@ stages:
         command: 'custom'
         customCommand: 'run build'
   - job: TestNpm
+    dependsOn:
+      - BuildNpm
     steps:
     - task: Npm@1
       displayName: 'Npm Test'
