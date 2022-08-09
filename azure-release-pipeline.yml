@@ -1,124 +1,135 @@
 trigger:
-  branches:
-    include:
-      - refs/tags/release
-
-pool: "Cashflows RHEL8 Pool"
-
-parameters:
-- name: createRelease
-  displayName: Create GitHub Release
-  type: boolean
-  default: false
-
-variables:
-  ${{ if eq(variables['Build.Reason'], 'Manual') }}:
-    createRelease: ${{ parameters.createRelease }}
-  ${{ else }}:
-    createRelease: true
-  nodeVersion: '14.x'
-  releaseVersionMajorMinor: '1.0'
-
-stages:
-- stage: Build
-  jobs:
-  - job: BuildAndTest
-    steps:
-    - task: NodeTool@0 
-      displayName: 'Install Node ${{ variables.nodeVersion }}'
-      inputs:
-        versionSpec: '${{ variables.nodeVersion }}'
-    - task: Npm@1
-      displayName: 'Npm Install'
-      inputs:
-        command: 'install'
-    - task: Npm@1
-      displayName: 'Npm Version'
-      inputs:
-        command: 'custom'
-        customCommand: 'version'
-    - task: Npm@1
-      displayName: 'Npm Build'
-      inputs:
-        command: 'custom'
-        customCommand: 'run build'
-    - task: Npm@1
-      displayName: 'Npm Test'
-      inputs:
-        command: 'custom'
-        customCommand: 'run test'
-    - ${{ if eq(variables['createRelease'], 'True') }}:
-      - task: CopyFiles@2
-        displayName: 'Copy Dist Folder'
-        inputs:
-          contents: 'dist/**'
-          targetFolder: '$(Build.ArtifactStagingDirectory)'
-      - publish: '$(Build.ArtifactStagingDirectory)/dist'
-        displayName: 'Publish Dist Folder'
-        artifact: dist
-    - ${{ else }}:
-      - pwsh: Write-Host "##vso[build.addbuildtag]non-release-build"
-        displayName: Tag Pipeline
-
-- ${{ if eq(variables['createRelease'], 'True') }}:
-  - stage: Prepare
-    dependsOn: Build
+    branches:
+      include:
+        - refs/tags/release
+  
+  pool: "Cashflows RHEL8 Pool"
+  
+  parameters:
+  - name: createRelease
+    displayName: Create GitHub Release
+    type: boolean
+    default: false
+  
+  variables:
+    ${{ if eq(variables['Build.Reason'], 'Manual') }}:
+      createRelease: ${{ parameters.createRelease }}
+    ${{ else }}:
+      createRelease: true
+    nodeVersion: '14.x'
+    releaseVersionMajorMinor: '1.0'
+  
+  stages:
+  - stage: Build
     jobs:
-    - job: CheckVersion
-      variables:
-        revision: $[ counter(variables['releaseVersionMajorMinor' ], 1)]
-        version: ${{ variables['releaseVersionMajorMinor'] }}.$(revision)
+    - job: BuildAndTest
       steps:
-      - download: current
-        artifact: dist
-      - task: PowerShell@2
-        displayName: 'Check Version'
-        name: CheckVersion
-        inputs:
-          targetType: 'inline'
-          script: |
-            echo "Version from pipeline: $(version)"
-            $packageJson = Get-Content -Path $(Build.SourcesDirectory)/package.json | ConvertFrom-Json
-            Write-Host Version from package.json: $packageJson.version
-            Write-Host "##vso[task.setvariable variable=version;isOutput=true]$(version)"
-  - stage: Release
-    dependsOn: Prepare
-    jobs:
-    - job: ReleaseGitHub
-      variables:
-        version: $[ dependencies.Prepare.outputs['CheckVersion.version']]
-      steps:
-      - download: current
-        artifact: dist
       - task: NodeTool@0 
         displayName: 'Install Node ${{ variables.nodeVersion }}'
         inputs:
           versionSpec: '${{ variables.nodeVersion }}'
-      - task: PowerShell@2
-        displayName: 'Check Version'
+      - task: Npm@1
+        displayName: 'Npm Install'
         inputs:
-          targetType: 'inline'
-          script: |
-            echo "Version from pipeline: $(version)"
-      - download: current
-        artifact: dist
-      - task: GitHubRelease@0
-        displayName: 'Create GitHub Release'
+          command: 'install'
+      - task: Npm@1
+        displayName: 'Npm Version'
         inputs:
-          gitHubConnection: cashflows-public-Core
-          repositoryName: 'cashflows/cashflows-clientlib-js'
-          action: 'create'
-          title: Release $(version)
-          tagSource: manual
-          tag: release-v$(version)
-          assets: |
-            $(Pipeline.Workspace)/dist/**
-      # - task: Npm@1
-      #   inputs:
-      #     command: publish
-      #     publishRegistry: useExternalRegistry
-      #     publishEndpoint: 'npmjs-public-Core'
-      - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
-        displayName: Tag Pipeline
-      - pwsh: Write-Host "##vso[build.addbuildtag]v$(version)"
-        displayName: Tag Pipeline
+          command: 'custom'
+          customCommand: 'version'
+      - task: Npm@1
+        displayName: 'Npm Build'
+        inputs:
+          command: 'custom'
+          customCommand: 'run build'
+      - task: Npm@1
+        displayName: 'Npm Test'
+        inputs:
+          command: 'custom'
+          customCommand: 'run test'
+      - ${{ if eq(variables['createRelease'], 'True') }}:
+        - task: CopyFiles@2
+          displayName: 'Copy Dist Folder'
+          inputs:
+            contents: 'dist/**'
+            targetFolder: '$(Build.ArtifactStagingDirectory)'
+        - publish: '$(Build.ArtifactStagingDirectory)/dist'
+          displayName: 'Publish Dist Folder'
+          artifact: dist
+      - ${{ else }}:
+        - pwsh: Write-Host "##vso[build.addbuildtag]non-release-build"
+          displayName: Tag Pipeline
+  
+  - ${{ if eq(variables['createRelease'], 'True') }}:
+    - stage: Validate
+      dependsOn: Build
+      jobs:
+      - job: CheckVersion
+        variables:
+          revision: $[ counter(variables['releaseVersionMajorMinor' ], 1)]
+          version: ${{ variables['releaseVersionMajorMinor'] }}.$(revision)
+        steps:
+        - download: current
+          artifact: dist
+        - task: PowerShell@2
+          displayName: 'Check Version'
+          name: CheckVersion
+          inputs:
+            targetType: 'inline'
+            script: |
+              $pipelineVersion = "$(version)"
+              $packageJson = Get-Content -Path $(Build.SourcesDirectory)/package.json | ConvertFrom-Json
+              $packageJsonVersion = $packageJson.version
+  
+              Write-Host Version from pipeline: $pipelineVersion
+              Write-Host Version from package.json: $packageJsonVersion
+  
+              if($pipelineVersion -ne $packageJsonVersion)
+              {
+                Write-Error "Pipeline version $pipelineVersion does not match package.json version $packageJsonVersion. Remember that the next pipeline run will increment the version revision number again."
+                exit 1
+              }
+  
+              Write-Host "##vso[task.setvariable variable=version;isOutput=true]$(version)"
+        - pwsh: Write-Host "##vso[build.addbuildtag]$(version)"
+          displayName: Tag Pipeline
+    - stage: Release
+      dependsOn: Validate
+      jobs:
+      - job: Release
+        variables:
+          version: $[ dependencies.CheckVersion.outputs['CheckVersion.version'] ]
+        steps:
+        - download: current
+          artifact: dist
+        - task: NodeTool@0 
+          displayName: 'Install Node ${{ variables.nodeVersion }}'
+          inputs:
+            versionSpec: '${{ variables.nodeVersion }}'
+        - task: PowerShell@2
+          displayName: 'Check Version'
+          name: CheckVersion
+          inputs:
+            targetType: 'inline'
+            script: |
+              echo "Version: $(version)"
+        # - task: GitHubRelease@0
+        #   displayName: 'Release to GitHub'
+        #   inputs:
+        #     gitHubConnection: cashflows-public-Core
+        #     repositoryName: 'cashflows/cashflows-clientlib-js'
+        #     action: 'create'
+        #     title: Release $(version)
+        #     tagSource: manual
+        #     tag: release-$(version)
+        #     assets: |
+        #       $(Pipeline.Workspace)/dist/**
+        # - task: Npm@1
+        #   displayName: 'Release to NpmJs'
+        #   inputs:
+        #     command: publish
+        #     publishRegistry: useExternalRegistry
+        #     publishEndpoint: 'npmjs-public-Core'
+        # - pwsh: Write-Host "##vso[build.addbuildtag]release-build"
+        #   displayName: Tag Pipeline
+  
