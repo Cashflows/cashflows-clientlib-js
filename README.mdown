@@ -40,6 +40,6 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 
 ## Changelog ##
 
-### v1.0.0 ###
+### v1.0.1 ###
 
-* First public release.
+* First public beta release.
