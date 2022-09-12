@@ -20,6 +20,16 @@
     "author": "Cashflows <tech@cashflows.com> (https://www.cashflows.com)",
     "license": "MIT",
     "main": "dist/cashflows-clientlib.js",
+    "module": "dist/cashflows-clientlib-module.js",
+    "classic": "dist/cashflows-clientlib-classic.js",
+    "targets": {
+        "classic": {
+            "context": "browser",
+            "outputFormat": "global",
+            "sourceMap": false
+        }
+    },
+    "browserslist": "> 0.5%, last 2 versions, not dead",
     "scripts": {
         "test": "mocha ./test/**/*.test.js",
         "build": "parcel build src/cashflows.js",
