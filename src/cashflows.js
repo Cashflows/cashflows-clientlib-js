@@ -238,3 +238,5 @@ export function Cashflows(intentToken, isIntegration) {
 		});
 	}
 }
+
+globalThis.Cashflows = Cashflows;
