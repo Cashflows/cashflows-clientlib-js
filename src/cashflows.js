@@ -1,5 +1,5 @@
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
-const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-int.cashflows.com/';
+const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-qaa.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
 
 export function Cashflows(isIntegration) {
@@ -40,7 +40,7 @@ export function Cashflows(isIntegration) {
 
 					// Create iframe.
 					var iframe = document.createElement("iframe");
-					var uuid = self._uuid();
+					var uuid = self._generateUuid();
 					iframe.setAttribute('frameborder', '0');
 					iframe.setAttribute('scrolling', 'no');
 					iframe.setAttribute('allowtransparency', 'true');
@@ -70,7 +70,8 @@ export function Cashflows(isIntegration) {
 					element.parentNode.removeChild(element);
 
 					self._preparationIds[uuid] = {
-						iframe: iframe
+						iframe: iframe,
+						valid: false
 					}
 				});
 
@@ -80,48 +81,60 @@ export function Cashflows(isIntegration) {
 					return;
 				}
 
+				cardElements.cardSubmit.setAttribute('disabled', '');
 				cardElements.cardSubmit.addEventListener('click', event => {
 					event.preventDefault();
 
 					if (self._checkoutPromise) {
 						cardElements.cardSubmit.setAttribute('disabled', '');
 		
-						self._httpRequest('post', 'payment-intents/' + self._intentToken + '/payments', {
+						self._apiRequest('post', 'payment-intents/' + self._intentToken + '/payments', {
 							'preparationIds': Object.keys(self._preparationIds)
 						}).then(data => {
-							if (data && data.links && data.links.action && data.links.action.url) {
+							try {
 								self._openActionLink(data.links.action.url);
 							}
-							else {
+							catch(error) {
 								self._checkoutPromise.reject('Invalid response.');
 							}
 						})
-						.catch(e => {
-							self._checkoutPromise.reject('Communication failure.');
-						});
+						.catch(error => self._checkoutPromise.reject(error.message));
 					}
 				}, true);
 
 				window.addEventListener("message", (event) => {
 					if (event.data.event == 'validate') {
-						var iframe = self._preparationIds[event.data.preparationId].iframe;
-						if (!event.data.valid) {
-							iframe.classList.add(CASHFLOWS_CLASSNAME_PREFIX + 'error');
-							var span = self._preparationIds[event.data.preparationId].span;
-							if (!span) {
-								span = document.createElement('span');
-								span.classList.add(CASHFLOWS_CLASSNAME_PREFIX + 'message');
+						var preparation = self._preparationIds[event.data.preparationId];
+						if (preparation) {
+							preparation.valid = event.data.valid;
+
+							var iframe = preparation.iframe;
+							if (!event.data.valid) {
+								iframe.classList.add(CASHFLOWS_CLASSNAME_PREFIX + 'error');
+								var span = preparation.span;
+								if (!span) {
+									span = document.createElement('span');
+									span.classList.add(CASHFLOWS_CLASSNAME_PREFIX + 'message');
+								}
+								span.innerHTML = event.data.message;
+								iframe.parentNode.insertBefore(span, iframe.nextSibling);
+								preparation.span = span;
 							}
-							span.innerHTML = event.data.message;
-							iframe.parentNode.insertBefore(span, iframe.nextSibling);
-							self._preparationIds[event.data.preparationId].span = span;
+							else {
+								iframe.classList.remove(CASHFLOWS_CLASSNAME_PREFIX + 'error');
+								if (preparation.span) {
+									iframe.parentNode.removeChild(preparation.span);
+								}
+								preparation.span = undefined;
+							}
+						}
+
+						var allValid = Object.keys(self._preparationIds).every(preparationId => self._preparationIds[preparationId].valid);
+						if (allValid) {
+							cardElements.cardSubmit.removeAttribute('disabled');
 						}
 						else {
-							iframe.classList.remove(CASHFLOWS_CLASSNAME_PREFIX + 'error');
-							if (self._preparationIds[event.data.preparationId].span) {
-								iframe.parentNode.removeChild(self._preparationIds[event.data.preparationId].span);
-							}
-							delete(self._preparationIds[event.data.preparationId].span);
+							cardElements.cardSubmit.setAttribute('disabled', '');
 						}
 					}
 				});
@@ -159,50 +172,41 @@ export function Cashflows(isIntegration) {
 
 	self.checkout = (intentToken) => {
 		return new Promise((resolve, reject) => {
-			self._httpRequest('get', 'payment-intents/' + intentToken)
-			.then(response => {
-				if (response.data.paymentStatus == 'Pending') {
-					self._intentToken = intentToken;
-					self._checkoutPromise = { resolve: resolve, reject: reject };
-					self._installUpdateEventsListeners();
-				}
-				else {
-					reject('Payment does not have a pending state.');
-				}
-			})
-			.catch((e, xhr) => {
-				if (e.xhr.status == 404) {
-					reject('Invalid payment intent.');
-				}
-				else {
-					reject('Communication failure.');
-				}
-			});
+			self._getPaymentIntent(intentToken)
+				.then(data => {
+					if (data.paymentStatus == 'Pending') {
+						self._intentToken = intentToken;
+						self._checkoutPromise = { resolve: resolve, reject: reject };
+						self._installUpdateEventsListener();
+					}
+					else {
+						reject('Invalid payment state: ' + data.paymentStatus);
+					}
+				})
+				.catch(error => reject(error));
 		});
 	};
 
 	// Private methods.
 
-	self._installUpdateEventsListeners = () => {
+	self._installUpdateEventsListener = () => {
 		window.addEventListener('message', (event) => {
 			if (event.data.event == 'update') {
-				self._httpRequest('get', 'payment-intents/' + self._intentToken)
-				.then(data => {
-					if (data && data.data && data.data.paymentStatus) {
-						if (data.data.paymentStatus != 'Pending') {
-							self._challengeDialog.remove();
-							if (data.data.paymentStatus == 'Paid') {
-								self._checkoutPromise.resolve();
-							}
-							else {
-								self._checkoutPromise.reject('Invalid payment status.');
+				self._getPaymentIntent(self._intentToken)
+					.then(data => {
+						if (data && data.paymentStatus) {
+							if (data.paymentStatus != 'Pending') {
+								self._challengeDialog.remove();
+								if (data.paymentStatus == 'Paid') {
+									self._checkoutPromise.resolve();
+								}
+								else {
+									self._checkoutPromise.reject('Payment failed.');
+								}
 							}
 						}
-					}
-				})
-				.catch(e => {
-					self._checkoutPromise.reject('Communication failure.');
-				});
+					})
+					.catch(error => self._checkoutPromise.reject(error));
 			}
 		}, false);
 	};
@@ -230,35 +234,48 @@ export function Cashflows(isIntegration) {
 		self._challengeDialog = backdrop;
 	};
 
-	self._httpRequest = function(method, endpoint, data = {}) {
-		let xhr = new XMLHttpRequest();
-		xhr.open(method.toUpperCase(), self._endpoint + 'api/gateway/' + endpoint);
-		xhr.setRequestHeader('Content-Type', 'application/json');
-
-		xhr.send(JSON.stringify(data));
-	
+	self._apiRequest = function(method, endpoint, data = {}) {
 		return new Promise((resolve, reject) => {
+			let xhr = new XMLHttpRequest();
+
+			xhr.open(method.toUpperCase(), self._endpoint + 'api/gateway/' + endpoint);
+			xhr.setRequestHeader('Content-Type', 'application/json');
+
 			xhr.onload = () => {
+				var parsedResponse = {};
+				try {
+					parsedResponse = !!xhr.responseText ? JSON.parse(xhr.responseText) : {};
+				}
+				catch(e) { /* ignore */ }
+
 				if (xhr.status >= 200 && xhr.status < 400) {
-					try {
-						resolve(JSON.parse(xhr.responseText));
-					}
-					catch(e) {
-						reject({ e: e, xhr: xhr });
-					}
+					resolve(parsedResponse);
 				}
 				else {
-					reject({ e: undefined, xhr: xhr });
+					try {
+						reject({ status: xhr.status, message: parsedResponse.errorReport.errors[0].message });
+					}
+					catch(e) {
+						reject({ status: xhr.status, message: 'Invalid response.'});
+					}
 				}
 			}
 	
 			xhr.onerror = () => {
-				reject({ e: undefined, xhr: xhr });
+				reject({ status: 400, message: 'Communication failure.' });
 			}
-		});
-	}
 
-	self._uuid = function() {
+			xhr.send(JSON.stringify(data));
+		});
+	};
+
+	self._getPaymentIntent = (intentToken) => {
+		return self._apiRequest('get', 'payment-intents/' + intentToken)
+			.then(response => Promise.resolve(response.data))
+			.catch(error => Promise.reject(error.status == 404 ? 'Invalid payment intent.' : error.message));
+	};
+
+	self._generateUuid = function() {
 		var d = new Date().getTime(); // timestamp
 		var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0; // time in microseconds since page-load or 0 if unsupported
 		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -272,7 +289,7 @@ export function Cashflows(isIntegration) {
 			}
 			return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
 		});
-	}
+	};
 }
 
 globalThis.Cashflows = Cashflows;
