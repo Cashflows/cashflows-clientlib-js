@@ -10,7 +10,7 @@
 
 **This library is currently in BETA. Please do not use it for production environments.**
 
-The Cashflows Client Library for JS is installed via [NPM](https://www.npmjs.com/). To install, simply add it
+The Cashflows Client Library for JS can be installed via [NPM](https://www.npmjs.com/). To install, simply add it
 to your `package.json` file:
 
 ```json
@@ -26,12 +26,32 @@ And run npm to update your dependencies:
     $ npm install
 
 You may also git clone or [download the files manually](https://github.com/cashflows/cashflows-clientlib-js/releases), and include the client library in your project.
+Use a script tag in the <head> of the HTML page.
+
+```html
+<script src="cashflows-clientlib-browser.js"></script>
+```
 
 ## Basic Usage ##
 
+Initialise the card payment fields- and checkout button on your checkout page. Optionally initialise all other payment methods you'd like
+to support. Start the checkout using a payment intent that was created server side.
+
 ```javascript
-    TBC
+var cashflows = new Cashflows(true);
+cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card');
+cashflows.checkout('<payment intent goes here')
+.then(() => {
+    // successful transaction
+})
+.catch(e => {
+    // failed transaction
+});
 ```
+
+## Examples ##
+
+There are examples on how to generate a payment intent in the examples folder.
 
 ## Support ##
 
@@ -40,6 +60,6 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 
 ## Changelog ##
 
-### v1.0.1-33 ###
+### v1.0.1-34 ###
 
 * First public beta release and setting up infrastructure.

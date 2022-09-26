@@ -7,6 +7,8 @@
 
         <link rel="stylesheet" href="css/main.css">
 
+        <script src="./cashflows.js" type="module"></script>
+
         <title>Payment Page</title>
     </head>
 
@@ -123,27 +125,35 @@
 
     </body>
 
-    <script src="./cashflows.js"></script>
     <script>
-        var cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d9825ebef86200275562be33cf06a44650cf2c4a165e4529e574ffde807cd2e2c6ac4cf782e182409fa82b8162c3a29b1fa2', true);
-        cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card');
+        window.onload = function() {
+            var cashflows = new Cashflows(true);
 
-        cashflows.onSuccess(() => {
-            var el = document.getElementById('card');
-            el.style.display = "none";
-            el = document.getElementById('alert-success');
-            el.style.display = "block";
-        });
-        cashflows.onFailure(() => {
-            var el = document.getElementById('card');
-            el.style.display = "none";
-            el = document.getElementById('alert-error');
-            el.style.display = "block";
-        });
+            var inits = [
+                cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card'),
+                cashflows.initApplePay('#cardsubmit'),
+                cashflows.initGooglePay('#cardsubmit'),
+                cashflows.initPayPal('#cardsubmit')
+            ];
 
-        //cashflows.initApplePay('#cardsubmit');
-        //cashflows.initGooglePay('#cardsubmit');
-        //cashflows.initPayPal('#cardsubmit');
+            Promise.all(inits)
+            .then(() => {
+                cashflows.checkout('a0f157604b0d599dfef371e03bd9d9828ea32c80956e73c2e7bfa7370409e410628b8c0f30f2373e8e065847961c9a4be96a3c96fcda759c6f3c72b6a26ea18b')
+                .then(() => {
+                    var el = document.getElementById('card');
+                    el.style.display = "none";
+                    el = document.getElementById('alert-success');
+                    el.style.display = "block";
+                })
+                .catch(e => {
+                    var el = document.getElementById('card');
+                    el.style.display = "none";
+                    el = document.getElementById('alert-error');
+                    el.style.display = "block";
+                    el.querySelector('#message').innerHTML = e;
+                });
+            });
+        }
     </script>
 
 </html>
