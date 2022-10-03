@@ -1,5 +1,5 @@
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
-const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-qaa.cashflows.com/';
+const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-devf.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
 
 export function Cashflows(isIntegration) {
@@ -150,21 +150,17 @@ export function Cashflows(isIntegration) {
 	};
 
 	self.initApplePay = (buttonEl) => {
-		console.warn('ApplePay is not yet supported');
 		return new Promise((resolve, reject) => {
-			resolve();
+			if (!window.ApplePaySession) {
+				reject('ApplePay not available on this device.');
+			}
+
+			return ApplePaySession.canMakePaymentsWithActiveCard('a');
 		});
 	};
 
 	self.initGooglePay = (buttonEl) => {
 		console.warn('GooglePay is not yet supported');
-		return new Promise((resolve, reject) => {
-			resolve();
-		});
-	};
-
-	self.initPayPal = (buttonEl) => {
-		console.warn('PayPal is not yet supported');
 		return new Promise((resolve, reject) => {
 			resolve();
 		});

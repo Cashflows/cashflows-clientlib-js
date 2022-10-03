@@ -132,13 +132,12 @@
             var inits = [
                 cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card'),
                 cashflows.initApplePay('#cardsubmit'),
-                cashflows.initGooglePay('#cardsubmit'),
-                cashflows.initPayPal('#cardsubmit')
+                cashflows.initGooglePay('#cardsubmit')
             ];
 
             Promise.all(inits)
             .then(() => {
-                cashflows.checkout('86f13f927f3ea158f04fb447f90b9bb6cbef456974bb3df7403e4866c121be4d244c0c55cb3ee568709eb7416481dad89ff47f396f9ea09846dc1b2cd77a1d16')
+                cashflows.checkout('a0f157604b0d599dfef371e03bd9d982c06485a378a774e27ad22952dad809c31fa024344ab290a3603ecb1419b829ddfd8a5b19b5dbea26df2dc53036f1a9c7')
                 .then(() => {
                     var el = document.getElementById('card');
                     el.style.display = "none";
