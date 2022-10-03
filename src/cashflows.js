@@ -94,7 +94,7 @@ export function Cashflows(isIntegration) {
 							try {
 								self._openActionLink(data.links.action.url);
 							}
-							catch(error) {
+							catch(_) {
 								self._checkoutPromise.reject('Invalid response.');
 							}
 						})
@@ -102,7 +102,7 @@ export function Cashflows(isIntegration) {
 					}
 				}, true);
 
-				window.addEventListener("message", (event) => {
+				window.addEventListener("message", event => {
 					if (event.data.event == 'validate') {
 						var preparation = self._preparationIds[event.data.preparationId];
 						if (preparation) {
@@ -143,7 +143,7 @@ export function Cashflows(isIntegration) {
 
 				resolve();
 			}
-			catch(e) {
+			catch(_) {
 				reject();
 			}
 		});
@@ -211,7 +211,7 @@ export function Cashflows(isIntegration) {
 		}, false);
 	};
 
-	self._openActionLink = function(link) {
+	self._openActionLink = (link) => {
 		var backdrop = document.createElement("div");
 		backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: none; z-index: 1; background-color: rgba(0,0,0,0.4);';
 
@@ -234,7 +234,7 @@ export function Cashflows(isIntegration) {
 		self._challengeDialog = backdrop;
 	};
 
-	self._apiRequest = function(method, endpoint, data = {}) {
+	self._apiRequest = (method, endpoint, data = {}) => {
 		return new Promise((resolve, reject) => {
 			let xhr = new XMLHttpRequest();
 
@@ -246,7 +246,7 @@ export function Cashflows(isIntegration) {
 				try {
 					parsedResponse = !!xhr.responseText ? JSON.parse(xhr.responseText) : {};
 				}
-				catch(e) { /* ignore */ }
+				catch(_) { /* ignore */ }
 
 				if (xhr.status >= 200 && xhr.status < 400) {
 					resolve(parsedResponse);
@@ -255,7 +255,7 @@ export function Cashflows(isIntegration) {
 					try {
 						reject({ status: xhr.status, message: parsedResponse.errorReport.errors[0].message });
 					}
-					catch(e) {
+					catch(_) {
 						reject({ status: xhr.status, message: 'Invalid response.'});
 					}
 				}
@@ -275,10 +275,10 @@ export function Cashflows(isIntegration) {
 			.catch(error => Promise.reject(error.status == 404 ? 'Invalid payment intent.' : error.message));
 	};
 
-	self._generateUuid = function() {
+	self._generateUuid = () => {
 		var d = new Date().getTime(); // timestamp
 		var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0; // time in microseconds since page-load or 0 if unsupported
-		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
 			var r = Math.random() * 16; // random number between 0 and 16
 			if(d > 0){ // use timestamp until depleted
 				r = (d + r)%16 | 0;
