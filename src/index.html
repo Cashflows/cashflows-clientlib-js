@@ -41,6 +41,8 @@
                     <!-- Payment method -->
                     <div id="card" class="payment-content__body">
 
+                        <button id="google-pay-button">Google Pay</button>
+
                         <div class="payment-content__body-header">
                             <div class="payment-info-extra">
                                 <div class="payment-info-extra__link"></div>
@@ -132,12 +134,12 @@
             var inits = [
                 cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card'),
                 cashflows.initApplePay('#cardsubmit'),
-                cashflows.initGooglePay('#cardsubmit')
+                cashflows.initGooglePay('#google-pay-button')
             ];
 
             Promise.all(inits)
             .then(() => {
-                cashflows.checkout('a0f157604b0d599dfef371e03bd9d982c06485a378a774e27ad22952dad809c31fa024344ab290a3603ecb1419b829ddfd8a5b19b5dbea26df2dc53036f1a9c7')
+                cashflows.checkout('a0f157604b0d599dfef371e03bd9d9823407e3c2215e1d8b7f2bf93e0e9414ca0e737f76bbff4b501be2aec3688993fbe90b571d4f544f153583711c13dbf3ca')
                 .then(() => {
                     var el = document.getElementById('card');
                     el.style.display = "none";

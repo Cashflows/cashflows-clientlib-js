@@ -150,6 +150,11 @@ export function Cashflows(isIntegration) {
 	};
 
 	self.initApplePay = (buttonEl) => {
+		console.warn('ApplePay is not yet supported');
+		return new Promise((resolve, reject) => {
+			resolve();
+		});
+		/*
 		return new Promise((resolve, reject) => {
 			if (!window.ApplePaySession) {
 				reject('ApplePay not available on this device.');
@@ -157,12 +162,56 @@ export function Cashflows(isIntegration) {
 
 			return ApplePaySession.canMakePaymentsWithActiveCard('a');
 		});
+		*/
 	};
 
 	self.initGooglePay = (buttonEl) => {
-		console.warn('GooglePay is not yet supported');
 		return new Promise((resolve, reject) => {
-			resolve();
+			try {
+				var googlePayElements = {};
+
+				googlePayElements.googlePaySubmit = buttonEl instanceof HTMLElement ? buttonEl : document.querySelector(buttonEl);
+				if (!googlePayElements.googlePaySubmit) {
+					reject('Invalid button: ' + buttonEl);
+					return;
+				}
+
+				googlePayElements.googlePaySubmit.setAttribute('disabled', '');
+				googlePayElements.googlePaySubmit.addEventListener('click', event => {
+					event.preventDefault();
+
+					if (self._googlePayElements.paymentData) {
+						console.log(self._googlePayElements.paymentData);
+
+						var a = new google.payments.api.PaymentsClient({environment: this.environment});
+					}
+				}, true);
+
+				self._googlePayElements = googlePayElements;
+
+				self._googlePayElements.afterCheckout = (intentToken) => {
+					return self._paymentRequest('post', 'google-pay/get-payment-data-request?token=' + intentToken)
+						.then(response => {
+							self._googlePayElements.paymentData = response;
+							googlePayElements.googlePaySubmit.removeAttribute('disabled');
+							return Promise.resolve(); // hides response
+						})
+				};
+
+				var script = document.createElement('script');
+				script.onload = () => {
+					resolve();
+				};
+				script.onerror = () => {
+					reject('Error while loading GooglePay javascript library.');
+				};
+				script.src = 'https://pay.google.com/gp/p/js/pay.js';
+
+				document.head.appendChild(script);
+			}
+			catch(_) {
+				reject();
+			}
 		});
 	};
 
@@ -170,14 +219,18 @@ export function Cashflows(isIntegration) {
 		return new Promise((resolve, reject) => {
 			self._getPaymentIntent(intentToken)
 				.then(data => {
-					if (data.paymentStatus == 'Pending') {
-						self._intentToken = intentToken;
-						self._checkoutPromise = { resolve: resolve, reject: reject };
-						self._installUpdateEventsListener();
-					}
-					else {
+					if (data.paymentStatus != 'Pending') {
 						reject('Invalid payment state: ' + data.paymentStatus);
+						return;
 					}
+
+					(self._googlePayElements?.afterCheckout ? self._googlePayElements.afterCheckout(intentToken) : Promise.resolve())
+						.then(() => {
+							self._intentToken = intentToken;
+							self._checkoutPromise = { resolve: resolve, reject: reject };
+							self._installUpdateEventsListener();
+						})
+						.catch(error => reject(error));
 				})
 				.catch(error => reject(error));
 		});
@@ -235,6 +288,41 @@ export function Cashflows(isIntegration) {
 			let xhr = new XMLHttpRequest();
 
 			xhr.open(method.toUpperCase(), self._endpoint + 'api/gateway/' + endpoint);
+			xhr.setRequestHeader('Content-Type', 'application/json');
+
+			xhr.onload = () => {
+				var parsedResponse = {};
+				try {
+					parsedResponse = !!xhr.responseText ? JSON.parse(xhr.responseText) : {};
+				}
+				catch(_) { /* ignore */ }
+
+				if (xhr.status >= 200 && xhr.status < 400) {
+					resolve(parsedResponse);
+				}
+				else {
+					try {
+						reject({ status: xhr.status, message: parsedResponse.errorReport.errors[0].message });
+					}
+					catch(_) {
+						reject({ status: xhr.status, message: 'Invalid response.'});
+					}
+				}
+			}
+	
+			xhr.onerror = () => {
+				reject({ status: 400, message: 'Communication failure.' });
+			}
+
+			xhr.send(JSON.stringify(data));
+		});
+	};
+
+	self._paymentRequest = (method, endpoint, data = {}) => {
+		return new Promise((resolve, reject) => {
+			let xhr = new XMLHttpRequest();
+
+			xhr.open(method.toUpperCase(), self._endpoint + 'payment/' + endpoint);
 			xhr.setRequestHeader('Content-Type', 'application/json');
 
 			xhr.onload = () => {
