@@ -165,37 +165,40 @@ export function Cashflows(intentToken, isIntegration) {
 		*/
 	};
 
-	self.initGooglePay = (buttonEl) => {
-		// https://developers.google.com/pay/api/web/guides/tutorial#supported-card-networks
+	// https://developers.google.com/pay/api/web/guides/tutorial#supported-card-networks
+	// customize button: https://developers.google.com/pay/api/web/guides/resources/customize
+	self.initGooglePay = (targetEl, buttonOptions) => {
 		return new Promise((resolve, reject) => {
 			try {
 				var googlePayElements = {};
 
-				googlePayElements.googlePaySubmit = buttonEl instanceof HTMLElement ? buttonEl : document.querySelector(buttonEl);
-				if (!googlePayElements.googlePaySubmit) {
-					reject('Invalid button: ' + buttonEl);
+				googlePayElements.googlePayEl = targetEl instanceof HTMLElement ? targetEl : document.querySelector(targetEl);
+				if (!googlePayElements.googlePayEl) {
+					reject('Invalid button: ' + googlePayEl);
 					return;
 				}
 
-				googlePayElements.googlePaySubmit.setAttribute('disabled', '');
-				googlePayElements.googlePaySubmit.addEventListener('click', event => {
-					event.preventDefault();
-
+				googlePayElements.buttonOptions = buttonOptions || {
+					buttonColor: 'default',
+					buttonSizeMode: 'fill',
+					buttonType: 'plain'
+				};
+				googlePayElements.buttonOptions.onClick = () => {
 					self._googlePayElements.client.loadPaymentData(self._googlePayElements.paymentData)
-						.then(paymentData => {
-							self._apiRequest('post', 'payment-intents/' + self._intentToken + '/payments', {
-								GooglePayTokenJson: paymentData.paymentMethodData.tokenizationData.token
-							}).then(response => {
-								if (response.data.paymentStatus == 'Paid') {
-									self._checkoutPromise.resolve();
-								}
-								else {
-									self._checkoutPromise.reject('Payment failed.');
-								}
-							})
-							.catch(error => self._checkoutPromise.reject(error.message));
-						});
-				}, true);
+					.then(paymentData => {
+						self._apiRequest('post', 'payment-intents/' + self._intentToken + '/payments', {
+							GooglePayTokenJson: paymentData.paymentMethodData.tokenizationData.token
+						}).then(response => {
+							if (response.data.paymentStatus == 'Paid') {
+								self._checkoutPromise.resolve();
+							}
+							else {
+								self._checkoutPromise.reject('Payment failed.');
+							}
+						})
+						.catch(error => self._checkoutPromise.reject(error.message));
+					});
+				};
 
 				var loadScriptPromise = new Promise((resolve, reject) => {
 					var script = document.createElement('script');
@@ -210,12 +213,14 @@ export function Cashflows(intentToken, isIntegration) {
 						googlePayElements.client = new google.payments.api.PaymentsClient({environment: this.environment});
 						googlePayElements.paymentData = result.pop();
 
+						googlePayElements.googlePayEl.appendChild(googlePayElements.client.createButton(googlePayElements.buttonOptions))
+						googlePayElements.googlePayEl.removeAttribute('hidden');
+
 						self._googlePayElements = googlePayElements;
 
 						self._googlePayElements.client.isReadyToPay(self._googlePayElements.paymentData).then(response => {
 							if (response.result) {
 								self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
-								self._googlePayElements.googlePaySubmit.removeAttribute('disabled');
 								resolve();
 							}
 						});
