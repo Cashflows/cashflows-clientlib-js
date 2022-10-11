@@ -34,13 +34,13 @@ Use a script tag in the <head> of the HTML page.
 
 ## Basic Usage ##
 
-Initialise the card payment fields- and checkout button on your checkout page. Optionally initialise all other payment methods you'd like
-to support. Start the checkout using a payment intent that was created server side.
+Create a new Cashflows instance with the intent that was created server side. The Cashflows instance can be configured to use the integration
+environment (true) or production (false). Initialise the card payment fields- and checkout button on your checkout page. Optionally initialise all other payment methods you'd like to support. Start the checkout by calling the checkout method.
 
 ```javascript
-var cashflows = new Cashflows(true);
+var cashflows = new Cashflows('<payment intent goes here>', true);
 cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card');
-cashflows.checkout('<payment intent goes here')
+cashflows.checkout()
 .then(() => {
     // successful transaction
 })
