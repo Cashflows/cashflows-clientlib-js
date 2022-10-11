@@ -2,10 +2,10 @@ const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
 const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-devf.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
 
-export function Cashflows(isIntegration) {
+export function Cashflows(intentToken, isIntegration) {
 	var self = this;
 
-	self._intentToken = '';
+	self._intentToken = intentToken;
 	self._isIntegration = isIntegration;
 
 	self._endpoint = self._isIntegration ? CASHFLOWS_INTEGRATION_ENDPOINT : CASHFLOWS_PRODUCTION_ENDPOINT;
@@ -144,12 +144,17 @@ export function Cashflows(isIntegration) {
 				resolve();
 			}
 			catch(_) {
-				reject();
+				reject('An unexpected error occured.');
 			}
 		});
 	};
 
 	self.initApplePay = (buttonEl) => {
+		console.warn('ApplePay is not yet supported');
+		return new Promise((resolve, reject) => {
+			resolve();
+		});
+		/*
 		return new Promise((resolve, reject) => {
 			if (!window.ApplePaySession) {
 				reject('ApplePay not available on this device.');
@@ -157,27 +162,87 @@ export function Cashflows(isIntegration) {
 
 			return ApplePaySession.canMakePaymentsWithActiveCard('a');
 		});
+		*/
 	};
 
-	self.initGooglePay = (buttonEl) => {
-		console.warn('GooglePay is not yet supported');
+	// https://developers.google.com/pay/api/web/guides/tutorial#supported-card-networks
+	// customize button: https://developers.google.com/pay/api/web/guides/resources/customize
+	self.initGooglePay = (targetEl, buttonOptions) => {
 		return new Promise((resolve, reject) => {
-			resolve();
+			try {
+				var googlePayElements = {};
+
+				googlePayElements.googlePayEl = targetEl instanceof HTMLElement ? targetEl : document.querySelector(targetEl);
+				if (!googlePayElements.googlePayEl) {
+					reject('Invalid button: ' + googlePayEl);
+					return;
+				}
+
+				googlePayElements.buttonOptions = buttonOptions || {
+					buttonColor: 'default',
+					buttonSizeMode: 'fill',
+					buttonType: 'plain'
+				};
+				googlePayElements.buttonOptions.onClick = () => {
+					self._googlePayElements.client.loadPaymentData(self._googlePayElements.paymentData)
+					.then(paymentData => {
+						self._apiRequest('post', 'payment-intents/' + self._intentToken + '/payments', {
+							GooglePayTokenJson: paymentData.paymentMethodData.tokenizationData.token
+						}).then(response => {
+							if (response.data.paymentStatus == 'Paid') {
+								self._checkoutPromise.resolve();
+							}
+							else {
+								self._checkoutPromise.reject('Payment failed.');
+							}
+						})
+						.catch(error => self._checkoutPromise.reject(error.message));
+					});
+				};
+
+				var loadScriptPromise = new Promise((resolve, reject) => {
+					var script = document.createElement('script');
+					script.onload = () => resolve();
+					script.onerror = () => reject('Error while loading GooglePay javascript library.');
+					script.src = 'https://pay.google.com/gp/p/js/pay.js';
+					document.head.appendChild(script);
+				});
+
+				Promise.all([loadScriptPromise, self._paymentRequest('post', 'google-pay/get-payment-data-request?token=' + self._intentToken)])
+					.then(result => {
+						googlePayElements.client = new google.payments.api.PaymentsClient({environment: this.environment});
+						googlePayElements.paymentData = result.pop();
+
+						googlePayElements.googlePayEl.appendChild(googlePayElements.client.createButton(googlePayElements.buttonOptions))
+						googlePayElements.googlePayEl.removeAttribute('hidden');
+
+						self._googlePayElements = googlePayElements;
+
+						self._googlePayElements.client.isReadyToPay(self._googlePayElements.paymentData).then(response => {
+							if (response.result) {
+								self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
+								resolve();
+							}
+						});
+					});
+			}
+			catch(_) {
+				reject('An unexpected error occured.');
+			}
 		});
 	};
 
-	self.checkout = (intentToken) => {
+	self.checkout = () => {
 		return new Promise((resolve, reject) => {
-			self._getPaymentIntent(intentToken)
+			self._getPaymentIntent(self._intentToken)
 				.then(data => {
-					if (data.paymentStatus == 'Pending') {
-						self._intentToken = intentToken;
-						self._checkoutPromise = { resolve: resolve, reject: reject };
-						self._installUpdateEventsListener();
-					}
-					else {
+					if (data.paymentStatus != 'Pending') {
 						reject('Invalid payment state: ' + data.paymentStatus);
+						return;
 					}
+
+					self._checkoutPromise = { resolve: resolve, reject: reject };
+					self._installUpdateEventsListener();
 				})
 				.catch(error => reject(error));
 		});
@@ -265,8 +330,43 @@ export function Cashflows(isIntegration) {
 		});
 	};
 
-	self._getPaymentIntent = (intentToken) => {
-		return self._apiRequest('get', 'payment-intents/' + intentToken)
+	self._paymentRequest = (method, endpoint, data = {}) => {
+		return new Promise((resolve, reject) => {
+			let xhr = new XMLHttpRequest();
+
+			xhr.open(method.toUpperCase(), self._endpoint + 'payment/' + endpoint);
+			xhr.setRequestHeader('Content-Type', 'application/json');
+
+			xhr.onload = () => {
+				var parsedResponse = {};
+				try {
+					parsedResponse = !!xhr.responseText ? JSON.parse(xhr.responseText) : {};
+				}
+				catch(_) { /* ignore */ }
+
+				if (xhr.status >= 200 && xhr.status < 400) {
+					resolve(parsedResponse);
+				}
+				else {
+					try {
+						reject({ status: xhr.status, message: parsedResponse.errorReport.errors[0].message });
+					}
+					catch(_) {
+						reject({ status: xhr.status, message: 'Invalid response.'});
+					}
+				}
+			}
+	
+			xhr.onerror = () => {
+				reject({ status: 400, message: 'Communication failure.' });
+			}
+
+			xhr.send(JSON.stringify(data));
+		});
+	};
+
+	self._getPaymentIntent = () => {
+		return self._apiRequest('get', 'payment-intents/' + self._intentToken)
 			.then(response => Promise.resolve(response.data))
 			.catch(error => Promise.reject(error.status == 404 ? 'Invalid payment intent.' : error.message));
 	};

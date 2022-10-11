@@ -41,6 +41,10 @@
                     <!-- Payment method -->
                     <div id="card" class="payment-content__body">
 
+                        <div id="google-pay" hidden="hidden"></div>
+
+                        <!-- button id="google-pay-button">Google Pay</button -->
+
                         <div class="payment-content__body-header">
                             <div class="payment-info-extra">
                                 <div class="payment-info-extra__link"></div>
@@ -127,17 +131,17 @@
 
     <script>
         window.onload = function() {
-            var cashflows = new Cashflows(true);
+            var cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d982a5af3dcbb747f7fb9f0170e1d71fb31c206a06e138f04c4c453e4db49e9a44f183fc4cddb672e627b5a7a00be417819f', true);
 
             var inits = [
                 cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card'),
                 cashflows.initApplePay('#cardsubmit'),
-                cashflows.initGooglePay('#cardsubmit')
+                cashflows.initGooglePay('#google-pay')
             ];
 
             Promise.all(inits)
             .then(() => {
-                cashflows.checkout('a0f157604b0d599dfef371e03bd9d982c06485a378a774e27ad22952dad809c31fa024344ab290a3603ecb1419b829ddfd8a5b19b5dbea26df2dc53036f1a9c7')
+                cashflows.checkout()
                 .then(() => {
                     var el = document.getElementById('card');
                     el.style.display = "none";
