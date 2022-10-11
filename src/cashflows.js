@@ -2,10 +2,10 @@ const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
 const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-devf.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
 
-export function Cashflows(isIntegration) {
+export function Cashflows(intentToken, isIntegration) {
 	var self = this;
 
-	self._intentToken = '';
+	self._intentToken = intentToken;
 	self._isIntegration = isIntegration;
 
 	self._endpoint = self._isIntegration ? CASHFLOWS_INTEGRATION_ENDPOINT : CASHFLOWS_PRODUCTION_ENDPOINT;
@@ -144,7 +144,7 @@ export function Cashflows(isIntegration) {
 				resolve();
 			}
 			catch(_) {
-				reject();
+				reject('An unexpected error occured.');
 			}
 		});
 	};
@@ -166,6 +166,7 @@ export function Cashflows(isIntegration) {
 	};
 
 	self.initGooglePay = (buttonEl) => {
+		// https://developers.google.com/pay/api/web/guides/tutorial#supported-card-networks
 		return new Promise((resolve, reject) => {
 			try {
 				var googlePayElements = {};
@@ -180,57 +181,63 @@ export function Cashflows(isIntegration) {
 				googlePayElements.googlePaySubmit.addEventListener('click', event => {
 					event.preventDefault();
 
-					if (self._googlePayElements.paymentData) {
-						console.log(self._googlePayElements.paymentData);
-
-						var a = new google.payments.api.PaymentsClient({environment: this.environment});
-					}
+					self._googlePayElements.client.loadPaymentData(self._googlePayElements.paymentData)
+						.then(paymentData => {
+							self._apiRequest('post', 'payment-intents/' + self._intentToken + '/payments', {
+								GooglePayTokenJson: paymentData.paymentMethodData.tokenizationData.token
+							}).then(response => {
+								if (response.data.paymentStatus == 'Paid') {
+									self._checkoutPromise.resolve();
+								}
+								else {
+									self._checkoutPromise.reject('Payment failed.');
+								}
+							})
+							.catch(error => self._checkoutPromise.reject(error.message));
+						});
 				}, true);
 
-				self._googlePayElements = googlePayElements;
+				var loadScriptPromise = new Promise((resolve, reject) => {
+					var script = document.createElement('script');
+					script.onload = () => resolve();
+					script.onerror = () => reject('Error while loading GooglePay javascript library.');
+					script.src = 'https://pay.google.com/gp/p/js/pay.js';
+					document.head.appendChild(script);
+				});
 
-				self._googlePayElements.afterCheckout = (intentToken) => {
-					return self._paymentRequest('post', 'google-pay/get-payment-data-request?token=' + intentToken)
-						.then(response => {
-							self._googlePayElements.paymentData = response;
-							googlePayElements.googlePaySubmit.removeAttribute('disabled');
-							return Promise.resolve(); // hides response
-						})
-				};
+				Promise.all([loadScriptPromise, self._paymentRequest('post', 'google-pay/get-payment-data-request?token=' + self._intentToken)])
+					.then(result => {
+						googlePayElements.client = new google.payments.api.PaymentsClient({environment: this.environment});
+						googlePayElements.paymentData = result.pop();
 
-				var script = document.createElement('script');
-				script.onload = () => {
-					resolve();
-				};
-				script.onerror = () => {
-					reject('Error while loading GooglePay javascript library.');
-				};
-				script.src = 'https://pay.google.com/gp/p/js/pay.js';
+						self._googlePayElements = googlePayElements;
 
-				document.head.appendChild(script);
+						self._googlePayElements.client.isReadyToPay(self._googlePayElements.paymentData).then(response => {
+							if (response.result) {
+								self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
+								self._googlePayElements.googlePaySubmit.removeAttribute('disabled');
+								resolve();
+							}
+						});
+					});
 			}
 			catch(_) {
-				reject();
+				reject('An unexpected error occured.');
 			}
 		});
 	};
 
-	self.checkout = (intentToken) => {
+	self.checkout = () => {
 		return new Promise((resolve, reject) => {
-			self._getPaymentIntent(intentToken)
+			self._getPaymentIntent(self._intentToken)
 				.then(data => {
 					if (data.paymentStatus != 'Pending') {
 						reject('Invalid payment state: ' + data.paymentStatus);
 						return;
 					}
 
-					(self._googlePayElements?.afterCheckout ? self._googlePayElements.afterCheckout(intentToken) : Promise.resolve())
-						.then(() => {
-							self._intentToken = intentToken;
-							self._checkoutPromise = { resolve: resolve, reject: reject };
-							self._installUpdateEventsListener();
-						})
-						.catch(error => reject(error));
+					self._checkoutPromise = { resolve: resolve, reject: reject };
+					self._installUpdateEventsListener();
 				})
 				.catch(error => reject(error));
 		});
@@ -353,8 +360,8 @@ export function Cashflows(isIntegration) {
 		});
 	};
 
-	self._getPaymentIntent = (intentToken) => {
-		return self._apiRequest('get', 'payment-intents/' + intentToken)
+	self._getPaymentIntent = () => {
+		return self._apiRequest('get', 'payment-intents/' + self._intentToken)
 			.then(response => Promise.resolve(response.data))
 			.catch(error => Promise.reject(error.status == 404 ? 'Invalid payment intent.' : error.message));
 	};
