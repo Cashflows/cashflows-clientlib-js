@@ -64,6 +64,6 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 
 * First public beta release and setting up infrastructure.
 
-### v1.0.35 ###
+### v1.0.36 ###
 
 * Added GooglePay support.
