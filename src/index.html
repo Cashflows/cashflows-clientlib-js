@@ -42,6 +42,7 @@
                     <div id="card" class="payment-content__body">
 
                         <div id="google-pay" hidden="hidden"></div>
+                        <div id="apple-pay" hidden="hidden" class="apple-pay-button"></div>
 
                         <!-- button id="google-pay-button">Google Pay</button -->
 
@@ -109,7 +110,7 @@
                             <div class="alert alert-success">
                                 <span id="message">The payment was successfully processed.</span>
                             </div>
-                            <a href="./" class="btn btn-block btn-inline btn-inline-primary">Restart</p>
+                            <a href="./" class="btn btn-block btn-inline btn-inline-primary">Restart</a>
                         </div>
                     </div>
 
@@ -118,7 +119,7 @@
                             <div class="alert alert-danger">
                                 <span id="message">An unexpected error occurred. We were unable to complete your payment.</span>
                             </div>
-                            <a href="./" class="btn btn-block btn-inline btn-inline-primary">Restart</p>
+                            <a href="./" class="btn btn-block btn-inline btn-inline-primary">Restart</a>
                         </div>
                     </div>
 
@@ -131,11 +132,11 @@
 
     <script>
         window.onload = function() {
-            var cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d982a5af3dcbb747f7fb9f0170e1d71fb31c206a06e138f04c4c453e4db49e9a44f183fc4cddb672e627b5a7a00be417819f', true);
+            var cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d9828df57d4d19e61ad6bad739ed4487cfaf1c750701f31ab0df36897e8dab0e57c6750e1383b6a484ecac875d032285674a', true);
 
             var inits = [
                 cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card'),
-                cashflows.initApplePay('#cardsubmit'),
+                cashflows.initApplePay('#apple-pay'),
                 cashflows.initGooglePay('#google-pay')
             ];
 
@@ -155,6 +156,13 @@
                     el.style.display = "block";
                     el.querySelector('#message').innerHTML = e;
                 });
+            })
+            .catch(e => {
+                var el = document.getElementById('card');
+                el.style.display = "none";
+                el = document.getElementById('alert-error');
+                el.style.display = "block";
+                el.querySelector('#message').innerHTML = e;
             });
         }
     </script>

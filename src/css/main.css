@@ -156,13 +156,20 @@ img {
 }
 
 #google-pay {
-    margin: 10px;
+    margin: 10px 10px 0 10px;
 }
 
-
-
-
-
+@supports (-webkit-appearance: -apple-pay-button) { 
+    .apple-pay-button {
+        -webkit-appearance: -apple-pay-button;
+        margin: 10px 10px 0 10px;
+        -apple-pay-button-style: black;
+        -apple-pay-button-type: plain;
+        height: 40px;
+        cursor: pointer;
+    }
+}
+  
 
 
 
