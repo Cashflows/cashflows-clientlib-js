@@ -68,6 +68,6 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 
 * Added GooglePay support.
 
-### v1.0.37 ###
+### v1.0.37-38 ###
 
 * Added ApplePay support.
