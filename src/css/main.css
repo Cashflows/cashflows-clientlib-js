@@ -159,7 +159,7 @@ img {
     margin: 10px 10px 0 10px;
 }
 
-@supports (-webkit-appearance: -apple-pay-button) { 
+@supports (-webkit-appearance: -apple-pay-button) {
     .apple-pay-button {
         -webkit-appearance: -apple-pay-button;
         margin: 10px 10px 0 10px;
