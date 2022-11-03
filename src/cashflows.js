@@ -1,5 +1,7 @@
+const axios = require('axios').default;
+
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
-const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-int.cashflows.com/';
+const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-devf.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
 
 export function Cashflows(intentToken, isIntegration) {
@@ -87,11 +89,9 @@ export function Cashflows(intentToken, isIntegration) {
 
 					if (self._checkoutPromiseSettlers) {
 						cardElements.cardSubmit.setAttribute('disabled', '');
-		
-						var requestData = JSON.stringify({
+						self._startPayment({
 							'preparationIds': Object.keys(self._preparationIds)
 						});
-						self._startPayment(requestData);
 					}
 				}, true);
 
@@ -173,11 +173,11 @@ export function Cashflows(intentToken, isIntegration) {
 
 					session.onvalidatemerchant = event => {
 						// This is called by Apple with some data that we need to process server side.
-						var requestData =
-							'validationUrl=' + encodeURIComponent(event.validationURL)
-							+ '&partnerMerchantIdentifier=' + encodeURIComponent(self._applePayElements.paymentData.partnerMerchantIdentifier)
-							+ '&domain=' + window.location.hostname;
-						self._apiRequest('post', 'payment/apple-pay/validate-merchant?token=' + self._intentToken, requestData, 'application/x-www-form-urlencoded')
+						var requestData = new FormData();
+						requestData.append('validationUrl', event.validationURL);
+						requestData.append('partnerMerchantIdentifier', self._applePayElements.paymentData.partnerMerchantIdentifier);
+						requestData.append('domain', window.location.hostname);
+						self._apiRequest('post', 'payment/apple-pay/validate-merchant?token=' + self._intentToken, requestData)
 							.then(responseData => session.completeMerchantValidation(responseData))
 							.catch(error => {
 								session.completeMerchantValidation({});
@@ -191,10 +191,9 @@ export function Cashflows(intentToken, isIntegration) {
 						// our start payment method (the sheet will slide out of view first and then a possible error or success
 						// message will be shown).
 						session.completePayment(ApplePaySession.STATUS_SUCCESS);
-						var requestData = JSON.stringify({
+						setTimeout(() => self._startPayment({
 							ApplePayTokenJson: JSON.stringify(event.payment.token)
-						});
-						setTimeout(() => self._startPayment(requestData), 2000);
+						}), 2000);
 					};
 
 					session.begin();
@@ -255,10 +254,9 @@ export function Cashflows(intentToken, isIntegration) {
 
 					self._googlePayElements.client.loadPaymentData(self._googlePayElements.paymentData)
 						.then(paymentData => {
-							var requestData = JSON.stringify({
+							self._startPayment({
 								GooglePayTokenJson: paymentData.paymentMethodData.tokenizationData.token
 							});
-							self._startPayment(requestData);
 						});
 				};
 
@@ -368,38 +366,19 @@ export function Cashflows(intentToken, isIntegration) {
 		self._challengeDialog = backdrop;
 	};
 
-	self._apiRequest = (method, endpoint, data = {}, contentType = 'application/json') => {
+	self._apiRequest = (method, endpoint, data = undefined) => {
 		return new Promise((resolve, reject) => {
-			let xhr = new XMLHttpRequest();
-
-			xhr.open(method.toUpperCase(), self._endpoint + endpoint);
-			xhr.setRequestHeader('Content-Type', contentType);
-
-			xhr.onload = () => {
-				var parsedResponse = {};
-				try {
-					parsedResponse = !!xhr.responseText ? JSON.parse(xhr.responseText) : {};
+			var request = {
+				method: method,
+				url: self._endpoint + endpoint,
+				data: data,
+				validateStatus: status => {
+					return status >= 200 && status < 400;
 				}
-				catch(_) { /* ignore */ }
-
-				if (xhr.status >= 200 && xhr.status < 400) {
-					resolve(parsedResponse);
-				}
-				else {
-					try {
-						reject({ status: xhr.status, message: parsedResponse.errorReport.errors[0].message });
-					}
-					catch(_) {
-						reject({ status: xhr.status, message: 'Invalid response.'});
-					}
-				}
-			}
-	
-			xhr.onerror = () => {
-				reject({ status: 400, message: 'Communication failure.' });
-			}
-
-			xhr.send(data);
+			};
+			axios(request)
+				.then(response => resolve(response.data))
+				.catch(error => reject({ status: error.response?.status, message: error.response?.data?.errorReport?.errors[0]?.message ?? 'Invalid response.'}));
 		});
 	};
 

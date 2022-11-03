@@ -132,11 +132,11 @@
 
     <script>
         window.onload = function() {
-            var cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d9823e1c03f78c0496746f46ad1155ba6e453aa092916eaddb91cc4ba0e40077a17feec9de9501e3ca41577f356ef508683b', true);
+            var cashflows = new Cashflows('plaap', true);
 
             var inits = [
                 cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card'),
-                cashflows.initApplePay('#apple-pay'),
+                //cashflows.initApplePay('#apple-pay'),
                 cashflows.initGooglePay('#google-pay')
             ];
 
