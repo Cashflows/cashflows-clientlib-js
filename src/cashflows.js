@@ -20,7 +20,15 @@ export function Cashflows(intentToken, isIntegration) {
 
 	self._checkoutPromiseSettlers = null; // also indicates a checkout has started
 
-	 // Public methods.
+	// The checkoutIntent promise is used by the various initialisation scripts to complete their initialisation
+	// when the intent is successfully validated during checkout.
+	self._checkoutIntentPromise = {};
+	self._checkoutIntentPromise.promise = new Promise((resolve, reject) => {
+		self._checkoutIntentPromise.resolve = resolve;
+		self._checkoutIntentPromise.reject = reject;
+	});
+
+	// Public methods.
 
 	self.initCard = (cardNumberEl, cardNameEl, cardExpiryEl, cardCvcEl, buttonEl) => {
 		return new Promise((resolve, reject) => {
@@ -161,7 +169,7 @@ export function Cashflows(intentToken, isIntegration) {
 					return;
 				}
 
-				applePayElements.applePayEl.addEventListener('click', event => {
+				applePayElements.applePayEl.addEventListener('click', () => {
 					if (!self._checkoutPromiseSettlers) {
 						self._log('Checkout was not started.');
 						return;
@@ -199,24 +207,25 @@ export function Cashflows(intentToken, isIntegration) {
 					session.begin();
 				});
 
-				self._apiRequest('post', 'payment/apple-pay/get-payment-request?token=' + self._intentToken)
+				self._applePayElements = applePayElements;
+				self._log('ApplePay was initialised.');
+				resolve();
+
+				// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
+				self._checkoutIntentPromise.promise
+					.then(() => self._apiRequest('post', 'payment/apple-pay/get-payment-request?token=' + self._intentToken))
 					.then(responseData => {
-						applePayElements.paymentData = responseData;
+						self._applePayElements.paymentData = responseData;
 						// This method will return false if the domain isn't verified by apple - check this if it continues to return
 						// false - apple regularly refreshes the domain verification.
 						// It also happens that canMakePaymentsWithActiveCard returns false if no billing address has been setup with the card,
 						// therefore the additional check using canMakePayments is also used and will show the button on all Apple devices.
-						ApplePaySession.canMakePaymentsWithActiveCard(applePayElements.paymentData.partnerMerchantIdentifier)
+						ApplePaySession.canMakePaymentsWithActiveCard(self._applePayElements.paymentData.partnerMerchantIdentifier)
 							.then(canMakePayments => {
 								if (canMakePayments || ApplePaySession.canMakePayments) {
-									applePayElements.applePayEl.removeAttribute('hidden');
-									self._applePayElements = applePayElements;
+									self._applePayElements.applePayEl.removeAttribute('hidden');
 								}
-
-								self._log('ApplePay was initialised.');
-								resolve();
 							})
-					
 					})
 					.catch(error => reject(typeof error === 'string' ? error : error.message ?? 'An unexpected error occured.'));
 			}
@@ -267,30 +276,34 @@ export function Cashflows(intentToken, isIntegration) {
 					script.src = 'https://pay.google.com/gp/p/js/pay.js';
 					document.head.appendChild(script);
 				});
+				loadScriptPromise
+					.then(() => {
+						self._googlePayElements = googlePayElements;
+						self._log('GooglePay was initialised.');
+						resolve();
 
-				Promise.all([loadScriptPromise, self._apiRequest('post', 'payment/google-pay/get-payment-data-request?token=' + self._intentToken)])
-					.then(results => {
-						googlePayElements.paymentData = results.pop();
-						googlePayElements.client = new google.payments.api.PaymentsClient({environment: googlePayElements.paymentData.environment});
+						// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
+						self._checkoutIntentPromise.promise
+							.then(() => self._apiRequest('post', 'payment/google-pay/get-payment-data-request?token=' + self._intentToken))
+							.then(responseData => {
+								self._googlePayElements.paymentData = responseData;
+								self._googlePayElements.client = new google.payments.api.PaymentsClient({environment: self._googlePayElements.paymentData.environment});
+								return self._googlePayElements.client.isReadyToPay(self._googlePayElements.paymentData)
+									.then(response => {
+										if (response.result) {
+											self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
 
-						googlePayElements.client.isReadyToPay(googlePayElements.paymentData).then(response => {
-							if (response.result) {
-								googlePayElements.client.prefetchPaymentData(googlePayElements.paymentData);
-
-								googlePayElements.googlePayEl.appendChild(googlePayElements.client.createButton(googlePayElements.buttonOptions))
-								googlePayElements.googlePayEl.removeAttribute('hidden');
-		
-								self._googlePayElements = googlePayElements;
-							}
-							else {
-								self._log('GooglePay not available on this device.');
-							}
-
-							self._log('GooglePay was initialised.');
-							resolve();
-						});
+											self._googlePayElements.googlePayEl.appendChild(googlePayElements.client.createButton(googlePayElements.buttonOptions))
+											self._googlePayElements.googlePayEl.removeAttribute('hidden');
+										}
+										else {
+											return Promise.reject({ message: 'GooglePay not available on this device.' });
+										}
+									});
+							})
+							.catch(error => self._log(error.message ?? 'An unexpected error occured.'));
 					})
-					.catch(error => reject(typeof error === 'string' ? error : error.message ?? 'An unexpected error occured.'));
+					.catch(error => reject(error));
 			}
 			catch(_) {
 				reject('An unexpected error occured.');
@@ -384,7 +397,10 @@ export function Cashflows(intentToken, isIntegration) {
 
 	self._getPaymentIntent = () => {
 		return self._apiRequest('get', 'api/gateway/payment-intents/' + self._intentToken)
-			.then(responseData => Promise.resolve(responseData.data))
+			.then(responseData => {
+				self._checkoutIntentPromise.resolve();
+				return responseData.data;
+			})
 			.catch(error => Promise.reject(error.status == 404 ? 'Invalid payment intent.' : error.message));
 	};
 
