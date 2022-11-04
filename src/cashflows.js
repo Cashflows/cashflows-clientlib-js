@@ -1,4 +1,5 @@
-const axios = require('axios').default;
+import { default as axios } from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
 const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-devf.cashflows.com/';
@@ -50,10 +51,11 @@ export function Cashflows(intentToken, isIntegration) {
 
 					// Create iframe.
 					var iframe = document.createElement("iframe");
-					var uuid = self._generateUuid();
+					var uuid = uuidv4();
 					iframe.setAttribute('frameborder', '0');
 					iframe.setAttribute('scrolling', 'no');
 					iframe.setAttribute('allowtransparency', 'true');
+					iframe.setAttribute('data-uuid', uuid);
 
 					iframe.setAttribute('src', self._endpoint + 'payment/preparation/' + uuid + '?inputtype=' + key);
 					[CASHFLOWS_CLASSNAME_PREFIX + 'card', CASHFLOWS_CLASSNAME_PREFIX + key].forEach(className => iframe.classList.add(className));
@@ -314,8 +316,10 @@ export function Cashflows(intentToken, isIntegration) {
 	self.checkout = () => {
 		self._checkoutPromiseSettlers = {};
 		self._checkoutPromiseSettlers.promise = new Promise((resolve, reject) => {
-			self._getPaymentIntent(self._intentToken)
+			self.getPaymentIntent(self._intentToken)
 				.then(data => {
+					self._checkoutIntentPromise.resolve();
+
 					if (data.paymentStatus != 'Pending') {
 						reject('Invalid payment state: ' + data.paymentStatus);
 						return;
@@ -332,12 +336,20 @@ export function Cashflows(intentToken, isIntegration) {
 		return self._checkoutPromiseSettlers.promise;
 	};
 
+	self.getPaymentIntent = () => {
+		return self._apiRequest('get', 'api/gateway/payment-intents/' + self._intentToken)
+			.then(responseData => {
+				return responseData.data;
+			})
+			.catch(error => Promise.reject(error.status == 404 ? 'Invalid payment intent.' : error.message));
+	};
+
 	// Private methods.
 
 	self._installUpdateEventsListener = () => {
 		window.addEventListener('message', (event) => {
 			if (event.data.event == 'update') {
-				self._getPaymentIntent(self._intentToken)
+				self.getPaymentIntent(self._intentToken)
 					.then(data => {
 						if (data && data.paymentStatus) {
 							if (data.paymentStatus != 'Pending') {
@@ -382,8 +394,9 @@ export function Cashflows(intentToken, isIntegration) {
 	self._apiRequest = (method, endpoint, data = undefined) => {
 		return new Promise((resolve, reject) => {
 			var request = {
+				baseURL: self._endpoint,
 				method: method,
-				url: self._endpoint + endpoint,
+				url: endpoint,
 				data: data,
 				validateStatus: status => {
 					return status >= 200 && status < 400;
@@ -393,15 +406,6 @@ export function Cashflows(intentToken, isIntegration) {
 				.then(response => resolve(response.data))
 				.catch(error => reject({ status: error.response?.status, message: error.response?.data?.errorReport?.errors[0]?.message ?? 'Invalid response.'}));
 		});
-	};
-
-	self._getPaymentIntent = () => {
-		return self._apiRequest('get', 'api/gateway/payment-intents/' + self._intentToken)
-			.then(responseData => {
-				self._checkoutIntentPromise.resolve();
-				return responseData.data;
-			})
-			.catch(error => Promise.reject(error.status == 404 ? 'Invalid payment intent.' : error.message));
 	};
 
 	self._startPayment = (requestData) => {
@@ -424,22 +428,6 @@ export function Cashflows(intentToken, isIntegration) {
 		if (self._isIntegration) {
 			console.log(message);
 		}
-	};
-
-	self._generateUuid = () => {
-		var d = new Date().getTime(); // timestamp
-		var d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0; // time in microseconds since page-load or 0 if unsupported
-		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-			var r = Math.random() * 16; // random number between 0 and 16
-			if(d > 0){ // use timestamp until depleted
-				r = (d + r)%16 | 0;
-				d = Math.floor(d/16);
-			} else { // use microseconds since page-load if supported
-				r = (d2 + r)%16 | 0;
-				d2 = Math.floor(d2/16);
-			}
-			return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-		});
 	};
 }
 
