@@ -316,7 +316,10 @@ export function Cashflows(intentToken, isIntegration) {
 	self.checkout = () => {
 		self._checkoutPromiseSettlers = {};
 		self._checkoutPromiseSettlers.promise = new Promise((resolve, reject) => {
-			self.getPaymentIntent(self._intentToken)
+			self._checkoutPromiseSettlers.resolve = resolve;
+			self._checkoutPromiseSettlers.reject = reject;
+
+			self.getPaymentIntent()
 				.then(data => {
 					self._checkoutIntentPromise.resolve();
 
@@ -327,8 +330,6 @@ export function Cashflows(intentToken, isIntegration) {
 
 					self._installUpdateEventsListener();
 
-					self._checkoutPromiseSettlers.resolve = resolve;
-					self._checkoutPromiseSettlers.reject = reject;
 				})
 				.catch(error => reject(error));
 		});
@@ -349,13 +350,13 @@ export function Cashflows(intentToken, isIntegration) {
 	self._installUpdateEventsListener = () => {
 		window.addEventListener('message', (event) => {
 			if (event.data.event == 'update') {
-				self.getPaymentIntent(self._intentToken)
+				self.getPaymentIntent()
 					.then(data => {
 						if (data && data.paymentStatus) {
 							if (data.paymentStatus != 'Pending') {
 								self._challengeDialog.remove();
 								if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified') {
-									self._checkoutPromiseSettlers.resolve();
+									self._checkoutPromiseSettlers.resolve(data);
 								}
 								else {
 									self._checkoutPromiseSettlers.reject('Payment failed.');
@@ -412,7 +413,7 @@ export function Cashflows(intentToken, isIntegration) {
 		return self._apiRequest('post', 'api/gateway/payment-intents/' + self._intentToken + '/payments', requestData)
 			.then(responseData => {
 				if (responseData.data.paymentStatus == 'Paid' || responseData.data.paymentStatus == 'Verified') {
-					self._checkoutPromiseSettlers.resolve();
+					self._checkoutPromiseSettlers.resolve(responseData.data);
 				}
 				else if (responseData.data.paymentStatus == 'Pending' && responseData.links?.action?.url) {
 					self._openActionLink(responseData.links.action.url);
