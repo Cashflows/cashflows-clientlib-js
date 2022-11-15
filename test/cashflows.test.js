@@ -1,15 +1,28 @@
+require('./mocha.setup.js');
+
 const assert = require('assert');
+const axios = require('axios');
+const MockAdapter = require("axios-mock-adapter");
+
 const Cashflows = require('../dist/cashflows-clientlib.js').Cashflows;
 
 describe('Cashflows', () => {
-	it('should be properly initialized', function() {
-		// let cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d9825ebef86200275562be33cf06a44650cf2c4a165e4529e574ffde807cd2e2c6ac4cf782e182409fa82b8162c3a29b1fa2', true);
-		assert.ok(true, 'should always succeed');
-		// TBC
+	it('valid payment intent', function() {
+		let cashflows = new Cashflows('valid-token-mock', true);
+		return cashflows.getPaymentIntent()
+			.then(responseData => {
+				assert.ok(responseData.token == 'valid-token-mock', 'should return intent with token');
+			})
 	});
 
-    it('should be able to reach cashflows api', function() {
-		assert.ok(true, 'should always succeed');
-		// TBC
+	it('invalid payment intent', function() {
+		let cashflows = new Cashflows('invalid-token-mock', true);
+		return cashflows.getPaymentIntent()
+			.then(() => {
+				assert.false('should not resolve');
+			})
+			.catch(error => {
+				assert.ok(error == 'Invalid payment intent.', 'should throw')
+			})
 	});
 });    
