@@ -17,7 +17,8 @@
         'configurationId' => $sConfigurationId,
         'amountToCollect' => number_format($iAmount, 2),
         'currency' => $sCurrency,
-        'locale' => 'en_GB'
+        'locale' => 'en_GB',
+        'paymentMethodsToUse' => [ 'Card' ]
     ];
 
     $jCreatePaymentJobRequest = json_encode($aCreatePaymentJobRequest);
