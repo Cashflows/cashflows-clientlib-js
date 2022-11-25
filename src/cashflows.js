@@ -286,7 +286,7 @@ export function Cashflows(intentToken, isIntegration) {
 
 						// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
 						self._checkoutIntentPromise.promise
-							.then(() => self._apiRequest('post', 'payment/google-pay/get-payment-data-request?token=' + self._intentToken))
+							.then(() => self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken))
 							.then(responseData => {
 								self._googlePayElements.paymentData = responseData;
 								self._googlePayElements.client = new google.payments.api.PaymentsClient({environment: self._googlePayElements.paymentData.environment});
@@ -302,7 +302,6 @@ export function Cashflows(intentToken, isIntegration) {
 								};
 								return self._googlePayElements.client.isReadyToPay(partialData)
 									.then(response => {
-										console.log(response);
 										if (response.result) {
 											self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
 
