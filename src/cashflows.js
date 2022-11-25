@@ -290,8 +290,19 @@ export function Cashflows(intentToken, isIntegration) {
 							.then(responseData => {
 								self._googlePayElements.paymentData = responseData;
 								self._googlePayElements.client = new google.payments.api.PaymentsClient({environment: self._googlePayElements.paymentData.environment});
-								return self._googlePayElements.client.isReadyToPay(self._googlePayElements.paymentData)
+
+								var partialData = {
+									'apiVersion': responseData.apiVersion,
+									'apiVersionMinor': responseData.apiVersionMinor,
+									'allowedPaymentMethods': responseData.allowedPaymentMethods,
+									'merchantInfo': {
+										'merchantId': responseData.merchantInfo.merchantId,
+										'merchantName': responseData.merchantInfo.merchantName
+									}
+								};
+								return self._googlePayElements.client.isReadyToPay(partialData)
 									.then(response => {
+										console.log(response);
 										if (response.result) {
 											self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
 
