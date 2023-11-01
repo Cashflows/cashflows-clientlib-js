@@ -25,4 +25,4 @@ describe('Cashflows', () => {
 				assert.ok(error == 'Invalid payment intent.', 'should throw')
 			})
 	});
-});    
+});

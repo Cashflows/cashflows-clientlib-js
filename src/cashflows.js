@@ -2,7 +2,7 @@ import { default as axios } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
-const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-int.cashflows.com/';
+const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-devf.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
 const CASHFLOWS_CARD_LIST_ITEM_TEMPLATE = 
 	'<li class="' + CASHFLOWS_CLASSNAME_PREFIX + 'card-list-item">'
@@ -122,11 +122,11 @@ export function Cashflows(intentToken, isIntegration) {
 
 									for (const [index, storedCard] of responseData.data.entries()) {
 										let liHtml = self.cardListItemTemplate
-											.replaceAll('{maskedCardNumber}', storedCard.maskedCardNumber)
-											.replaceAll('{cardExpiryMonth}', storedCard.cardExpiryMonth)
-											.replaceAll('{cardExpiryYear}', storedCard.cardExpiryYear)
-											.replaceAll('{encryptedCardData}', storedCard.encryptedCardData)
-											.replaceAll('{index}', index);
+											.replace(/{maskedCardNumber}/g, storedCard.maskedCardNumber)
+											.replace(/{cardExpiryMonth}/g, storedCard.cardExpiryMonth)
+											.replace(/{cardExpiryYear}/g, storedCard.cardExpiryYear)
+											.replace(/{encryptedCardData}/g, storedCard.encryptedCardData)
+											.replace(/{index}/g, index);
 
 										ulEl.insertAdjacentHTML('beforeend', liHtml);
 										let liEl = ulEl.lastChild;
