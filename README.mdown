@@ -8,8 +8,6 @@
 
 ## Installation ##
 
-**This library is currently in BETA. Please do not use it for production environments.**
-
 The Cashflows Client Library for JS can be installed via [NPM](https://www.npmjs.com/). To install, simply add it
 to your `package.json` file:
 
@@ -34,12 +32,30 @@ Use a script tag in the <head> of the HTML page.
 
 ## Basic Usage ##
 
-Create a new Cashflows instance with the intent that was created server side. The Cashflows instance can be configured to use the integration
-environment (true) or production (false). Initialise the card payment fields- and checkout button on your checkout page. Optionally initialise all other payment methods you'd like to support. Start the checkout by calling the checkout method.
+Create a new Cashflows instance with the intent that was created server side. The Cashflows instance can be configured to use the integration environment (true) or
+production (false). Initialise the card payment fields- and checkout button on your checkout page. Optionally initialise all other payment methods you'd like to support.
+Start the checkout by calling the checkout method.
 
 ```javascript
 var cashflows = new Cashflows('<payment intent goes here>', true);
 cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card');
+cashflows.checkout()
+.then(() => {
+    // successful transaction
+})
+.catch(e => {
+    // failed transaction
+});
+```
+
+## Stored Cards Usage #
+
+In addition to the payment fields, include a checkbox and a div element to enable the stored cards feature. The checkbox can be used by the customer to request
+storing the card details. The div element will be pupulated with the list of stored cards.
+
+```javascript
+var cashflows = new Cashflows('<payment intent goes here>', true);
+cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card', '#store-card-details', '#stored-card-list');
 cashflows.checkout()
 .then(() => {
     // successful transaction
@@ -71,3 +87,7 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 ### v1.0.37-43 ###
 
 * Added ApplePay support.
+
+### v1.0.44 ###
+
+* Added Stored Cards support.
