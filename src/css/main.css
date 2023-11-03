@@ -255,7 +255,7 @@ form:invalid button[type=submit]:hover {
 
 .cf-card-list {
     list-style-type: none;
-    padding: 0;
+    padding: 0 0 20px 0;
 }
 .cf-card-list .cf-card-list-remove {
     width: 25px;
@@ -266,6 +266,13 @@ form:invalid button[type=submit]:hover {
     background-repeat: no-repeat;
     background-size: 25px 25px;
 
+}
+
+.payment-content__body-content h2 {
+    display: block;
+    font-size: 1em;
+    margin-bottom: 20px;
+    font-style: italic;
 }
 
 .form-control::-ms-clear {

@@ -107,7 +107,7 @@ export function Cashflows(intentToken, isIntegration) {
 					self._checkoutIntentPromises.push(() =>
 						self._apiRequest('get', 'api/gateway/payment-intents/' + self._intentToken + '/stored-cards')
 							.then(responseData => {
-								if (responseData?.data && responseData.data instanceof Array) {
+								if (responseData?.data && responseData.data instanceof Array && responseData?.data.length > 0) {
 									let ulEl = document.createElement("ul");
 									ulEl.classList.add(CASHFLOWS_CLASSNAME_PREFIX + 'card-list');
 
@@ -142,12 +142,18 @@ export function Cashflows(intentToken, isIntegration) {
 										deleteEl.addEventListener('click', event => {
 											event.preventDefault();
 											self._apiRequest('delete', 'api/gateway/payment-intents/' + self._intentToken + '/stored-cards/' + storedCard.encryptedCardData)
-												.then(() => ulEl.removeChild(liEl))
+												.then(() => {
+													ulEl.removeChild(liEl);
+													if (!ulEl.querySelector('input')) {
+														cardElements.cardList.setAttribute('hidden', 'hidden');
+													}
+												})
 												.catch(error => self._log(error.message ?? 'An unexpected error occured.'));
 										});
 									}
 
 									cardElements.cardList.appendChild(ulEl);
+									cardElements.cardList.removeAttribute('hidden');
 								}
 							})
 					);
