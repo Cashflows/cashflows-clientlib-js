@@ -2,7 +2,7 @@ import { default as axios } from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
-const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-devf.cashflows.com/';
+const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-int.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
 const CASHFLOWS_CARD_LIST_ITEM_TEMPLATE = 
 	'<li class="' + CASHFLOWS_CLASSNAME_PREFIX + 'card-list-item">'
@@ -35,7 +35,7 @@ export function Cashflows(intentToken, isIntegration) {
 	// promise instead of the promises themselves to delay their execution.
 	self._checkoutIntentPromises = [];
 
-	// Use the default template to render the card list items. This can be overriden.
+	// Use the default template to render the card list items. This can be overridden.
 	this.cardListItemTemplate = CASHFLOWS_CARD_LIST_ITEM_TEMPLATE;
 
 	// Public methods.
