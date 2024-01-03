@@ -66,7 +66,7 @@ export function Cashflows(intentToken, isIntegration) {
 					iframe.setAttribute('allowtransparency', 'true');
 					iframe.setAttribute('data-uuid', uuid);
 
-					iframe.setAttribute('src', self._endpoint + 'payment/preparation/' + uuid + '?inputtype=' + key);
+					iframe.setAttribute('src', self._endpoint + 'preparations/' + uuid + '?inputtype=' + key);
 					[CASHFLOWS_CLASSNAME_PREFIX + 'card', CASHFLOWS_CLASSNAME_PREFIX + key].forEach(className => iframe.classList.add(className));
 
 					// Style iframe.
