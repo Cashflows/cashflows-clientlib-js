@@ -4,6 +4,15 @@ import { v4 as uuidv4 } from 'uuid';
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
 const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-int.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
+const CASHFLOWS_CARD_LIST_ITEM_TEMPLATE = 
+	'<li class="' + CASHFLOWS_CLASSNAME_PREFIX + 'card-list-item">'
+	+ '<input type="radio" name="card-list-item" id="card-list-item-index-{index}" value="{encryptedCardData}" class="' + CASHFLOWS_CLASSNAME_PREFIX + 'card-list-radio">'
+	+ '<label for="card-list-item-index-{index}">'
+	+ '<span><strong>{maskedCardNumber}</strong></span>'
+	+ '<span>Expires <strong>{cardExpiryMonth}/{cardExpiryYear}</strong></span>'
+	+ '</label>'
+	+ '<button value="{encryptedCardData}" class="' + CASHFLOWS_CLASSNAME_PREFIX + 'card-list-remove"></button>'
+	+ '</li>';
 
 export function Cashflows(intentToken, isIntegration) {
 	var self = this;
@@ -19,19 +28,19 @@ export function Cashflows(intentToken, isIntegration) {
 	self._googlePayElements = null;
 	self._payPalElements = null;
 
-	self._checkoutPromiseSettlers = null; // also indicates a checkout has started
+	self._checkoutPromiseSettlers = null; // not null also indicates a checkout has started
 
-	// The checkoutIntent promise is used by the various initialisation scripts to complete their initialisation
-	// when the intent is successfully validated during checkout.
-	self._checkoutIntentPromise = {};
-	self._checkoutIntentPromise.promise = new Promise((resolve, reject) => {
-		self._checkoutIntentPromise.resolve = resolve;
-		self._checkoutIntentPromise.reject = reject;
-	});
+	// The checkoutIntent promises are used by the various initialisation scripts to complete their initialisation
+	// when the intent is successfully validated during checkout. The array contains functions that return the
+	// promise instead of the promises themselves to delay their execution.
+	self._checkoutIntentPromises = [];
+
+	// Use the default template to render the card list items. This can be overridden.
+	this.cardListItemTemplate = CASHFLOWS_CARD_LIST_ITEM_TEMPLATE;
 
 	// Public methods.
 
-	self.initCard = (cardNumberEl, cardNameEl, cardExpiryEl, cardCvcEl, buttonEl) => {
+	self.initCard = (cardNumberEl, cardNameEl, cardExpiryEl, cardCvcEl, buttonEl, storeCardDetailsEl, cardListEl) => {
 		return new Promise((resolve, reject) => {
 			try {
 				var cardElements = {};
@@ -70,13 +79,6 @@ export function Cashflows(intentToken, isIntegration) {
 					}
 					iframe.style.cssText = cssText;
 
-					// Style iframe alternative.
-					// var width = element.offsetWidth.toString() + 'px';
-					// var height = element.offsetHeight.toString() + 'px';
-					// iframe.setAttribute('style', 'width:' + width + ';height:' + height + ';');
-					// iframe.style.width = width;
-					// iframe.style.height = height;
-
 					// Replace input field with iframe.
 					element.parentNode.insertBefore(iframe, element);
 					element.parentNode.removeChild(element);
@@ -86,6 +88,76 @@ export function Cashflows(intentToken, isIntegration) {
 						valid: false
 					}
 				});
+
+				// If stored shopper elements have been passed, we need to make sure they're valid.
+				if (storeCardDetailsEl || cardListEl) {
+					cardElements.storeCardDetails = storeCardDetailsEl instanceof HTMLInputElement ? storeCardDetailsEl : document.querySelector(storeCardDetailsEl);
+					if (!cardElements.storeCardDetails) {
+						reject('Invalid checkbox: ' + storeCardDetailsEl);
+						return;
+					}
+
+					cardElements.cardList = cardListEl instanceof HTMLDivElement ? cardListEl : document.querySelector(cardListEl);
+					if (!cardElements.cardList) {
+						reject('Invalid div: ' + cardListEl);
+						return;
+					}
+
+					// Only continue with fetching stored cards when the checkoutIntentPromise resolves and thus intent has been validated.
+					self._checkoutIntentPromises.push(() =>
+						self._apiRequest('get', 'api/gateway/payment-intents/' + self._intentToken + '/stored-cards')
+							.then(responseData => {
+								if (responseData?.data && responseData.data instanceof Array && responseData?.data.length > 0) {
+									let ulEl = document.createElement("ul");
+									ulEl.classList.add(CASHFLOWS_CLASSNAME_PREFIX + 'card-list');
+
+									// When the inner field is firing a validation event, it means data has been entered and the
+									// radio button should be unchecked.
+									window.addEventListener('message', event => {
+										let inputEl = ulEl.querySelector('input:checked');
+										if (inputEl) {
+											inputEl.checked = false;
+										}
+									});
+
+									for (const [index, storedCard] of responseData.data.entries()) {
+										let liHtml = self.cardListItemTemplate
+											.replace(/{maskedCardNumber}/g, storedCard.maskedCardNumber)
+											.replace(/{cardExpiryMonth}/g, storedCard.cardExpiryMonth)
+											.replace(/{cardExpiryYear}/g, storedCard.cardExpiryYear)
+											.replace(/{encryptedCardData}/g, storedCard.encryptedCardData)
+											.replace(/{index}/g, index);
+
+										ulEl.insertAdjacentHTML('beforeend', liHtml);
+										let liEl = ulEl.lastChild;
+
+										let inputEl = liEl.querySelector('input');
+										inputEl.addEventListener('change', event => {
+											if (inputEl.checked) {
+												cardElements.cardSubmit.removeAttribute('disabled');
+											}
+										});
+
+										let deleteEl = liEl.querySelector('button');
+										deleteEl.addEventListener('click', event => {
+											event.preventDefault();
+											self._apiRequest('delete', 'api/gateway/payment-intents/' + self._intentToken + '/stored-cards/' + storedCard.encryptedCardData)
+												.then(() => {
+													ulEl.removeChild(liEl);
+													if (!ulEl.querySelector('input')) {
+														cardElements.cardList.setAttribute('hidden', 'hidden');
+													}
+												})
+												.catch(error => self._log(error.message ?? 'An unexpected error occured.'));
+										});
+									}
+
+									cardElements.cardList.appendChild(ulEl);
+									cardElements.cardList.removeAttribute('hidden');
+								}
+							})
+					);
+				}
 
 				cardElements.cardSubmit = buttonEl instanceof HTMLInputElement ? buttonEl : document.querySelector(buttonEl);
 				if (!cardElements.cardSubmit) {
@@ -99,9 +171,18 @@ export function Cashflows(intentToken, isIntegration) {
 
 					if (self._checkoutPromiseSettlers) {
 						cardElements.cardSubmit.setAttribute('disabled', '');
-						self._startPayment({
-							'preparationIds': Object.keys(self._preparationIds)
-						});
+						var requestData = {};
+						var selectedStoredCard = cardElements.cardList?.querySelector('input:checked');
+						if (selectedStoredCard) {
+							requestData.storedCard = selectedStoredCard.value;
+						}
+						else {
+							requestData.preparationIds = Object.keys(self._preparationIds);
+						}
+						if (cardElements.storeCardDetails?.checked) {
+							requestData.options = [ 'StoreCardDetails' ];
+						}
+						self._startPayment(requestData);
 					}
 				}, true);
 
@@ -214,22 +295,22 @@ export function Cashflows(intentToken, isIntegration) {
 				resolve();
 
 				// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
-				self._checkoutIntentPromise.promise
-					.then(() => self._apiRequest('post', 'payment/apple-pay/get-payment-request?token=' + self._intentToken))
-					.then(responseData => {
-						self._applePayElements.paymentData = responseData;
-						// This method will return false if the domain isn't verified by apple - check this if it continues to return
-						// false - apple regularly refreshes the domain verification.
-						// It also happens that canMakePaymentsWithActiveCard returns false if no billing address has been setup with the card,
-						// therefore the additional check using canMakePayments is also used and will show the button on all Apple devices.
-						ApplePaySession.canMakePaymentsWithActiveCard(self._applePayElements.paymentData.partnerMerchantIdentifier)
-							.then(canMakePayments => {
-								if (canMakePayments || ApplePaySession.canMakePayments) {
-									self._applePayElements.applePayEl.removeAttribute('hidden');
-								}
-							})
-					})
-					.catch(error => reject(typeof error === 'string' ? error : error.message ?? 'An unexpected error occured.'));
+				self._checkoutIntentPromises.push(() =>
+					self._apiRequest('post', 'payment/apple-pay/get-payment-request?token=' + self._intentToken)
+						.then(responseData => {
+							self._applePayElements.paymentData = responseData;
+							// This method will return false if the domain isn't verified by apple - check this if it continues to return
+							// false - apple regularly refreshes the domain verification.
+							// It also happens that canMakePaymentsWithActiveCard returns false if no billing address has been setup with the card,
+							// therefore the additional check using canMakePayments is also used and will show the button on all Apple devices.
+							ApplePaySession.canMakePaymentsWithActiveCard(self._applePayElements.paymentData.partnerMerchantIdentifier)
+								.then(canMakePayments => {
+									if (canMakePayments || ApplePaySession.canMakePayments) {
+										self._applePayElements.applePayEl.removeAttribute('hidden');
+									}
+								})
+						})
+				);
 			}
 			catch(_) {
 				reject('An unexpected error occured.');
@@ -285,35 +366,35 @@ export function Cashflows(intentToken, isIntegration) {
 						resolve();
 
 						// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
-						self._checkoutIntentPromise.promise
-							.then(() => self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken))
-							.then(responseData => {
-								self._googlePayElements.paymentData = responseData;
-								self._googlePayElements.client = new google.payments.api.PaymentsClient({environment: self._googlePayElements.paymentData.environment});
+						self._checkoutIntentPromises.push(() =>
+							self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken)
+								.then(responseData => {
+									self._googlePayElements.paymentData = responseData;
+									self._googlePayElements.client = new google.payments.api.PaymentsClient({environment: self._googlePayElements.paymentData.environment});
 
-								var partialData = {
-									'apiVersion': responseData.apiVersion,
-									'apiVersionMinor': responseData.apiVersionMinor,
-									'allowedPaymentMethods': responseData.allowedPaymentMethods,
-									'merchantInfo': {
-										'merchantId': responseData.merchantInfo.merchantId,
-										'merchantName': responseData.merchantInfo.merchantName
-									}
-								};
-								return self._googlePayElements.client.isReadyToPay(partialData)
-									.then(response => {
-										if (response.result) {
-											self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
+									var partialData = {
+										'apiVersion': responseData.apiVersion,
+										'apiVersionMinor': responseData.apiVersionMinor,
+										'allowedPaymentMethods': responseData.allowedPaymentMethods,
+										'merchantInfo': {
+											'merchantId': responseData.merchantInfo.merchantId,
+											'merchantName': responseData.merchantInfo.merchantName
+										}
+									};
+									return self._googlePayElements.client.isReadyToPay(partialData)
+										.then(response => {
+											if (response.result) {
+												self._googlePayElements.client.prefetchPaymentData(self._googlePayElements.paymentData);
 
-											self._googlePayElements.googlePayEl.appendChild(googlePayElements.client.createButton(googlePayElements.buttonOptions))
-											self._googlePayElements.googlePayEl.removeAttribute('hidden');
-										}
-										else {
-											return Promise.reject({ message: 'GooglePay not available on this device.' });
-										}
-									});
-							})
-							.catch(error => self._log(error.message ?? 'An unexpected error occured.'));
+												self._googlePayElements.googlePayEl.appendChild(googlePayElements.client.createButton(googlePayElements.buttonOptions))
+												self._googlePayElements.googlePayEl.removeAttribute('hidden');
+											}
+											else {
+												self._log('GooglePay not available on this device.');
+											}
+										});
+								})
+						);
 					})
 					.catch(error => reject(error));
 			}
@@ -331,17 +412,13 @@ export function Cashflows(intentToken, isIntegration) {
 
 			self.getPaymentIntent()
 				.then(data => {
-					self._checkoutIntentPromise.resolve();
-
 					if (data.paymentStatus != 'Pending') {
 						reject('Invalid payment state: ' + data.paymentStatus);
-						return;
 					}
-
-					self._installUpdateEventsListener();
-
 				})
-				.catch(error => reject(error));
+				.then(() => Promise.all(self._checkoutIntentPromises.map(promise => promise())))
+				.then(() => self._installUpdateEventsListener())
+				.catch(error => reject(error.message ?? error ?? 'An unexpected error occured.'));
 		});
 
 		return self._checkoutPromiseSettlers.promise;

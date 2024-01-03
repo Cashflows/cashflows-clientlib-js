@@ -1,6 +1,6 @@
 {
     "name": "cashflows-clientlib-js",
-    "version": "1.0.43",
+    "version": "1.0.44",
     "description": "Cashflows Client Library for JavaScript",
     "homepage": "https://www.cashflows.com",
     "bugs": {
@@ -36,17 +36,18 @@
         "serve": "parcel src/index.html --https --public-url /"
     },
     "devDependencies": {
-        "axios-mock-adapter": "^1.21.2",
+        "axios-mock-adapter": "^1.22.0",
         "buffer": "^6.0.3",
-        "jsdom": "^20.0.2",
+        "jsdom": "^20.0.3",
         "jsdom-global": "^3.0.2",
-        "mocha": "^10.0.0",
-        "parcel": "^2.6.0",
+        "mocha": "^10.2.0",
+        "parcel": "^2.10.1",
         "process": "^0.11.10",
         "stream-browserify": "^3.0.0"
     },
     "dependencies": {
-        "axios": "^1.1.3",
-        "uuid": "^9.0.0"
+        "@swc/helpers": "^0.5.3",
+        "axios": "^1.6.0",
+        "uuid": "^9.0.1"
     }
 }

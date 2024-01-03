@@ -11,26 +11,12 @@ before(function() {
 		.onPost("api/gateway/payment-intents/valid-token-mock/payments").reply(config => {
 			return [ 200, { data: { paymentStatus: 'Paid', requestData: JSON.parse(config.data) } } ];
 		})
+		.onGet("api/gateway/payment-intents/valid-token-mock/stored-cards").reply(config => {
+			return [ 200, { data: [ { maskedCardNumber: '**** **** **** 1234', cardExpiryMonth: 1, cardExpiryYear: 23, encryptedCardData: 'AAAA' } ] } ];
+		})
         .onAny().reply(404);
-
-    this.jsdom = require('jsdom-global')(`
-		<!DOCTYPE html>
-		<html>
-			<body>
-				<form id="card-live-form" method="post">
-				<input id="card-number" />
-				<input id="card-name" />
-				<input id="card-expiration" />
-				<input id="card-cvc" />
-				<button type="submit" id="pay-with-card">
-				</form>
-			</body>
-		</html>
-	`);
 });
 
 after(function() {
     this.mock.restore();
-
-	this.jsdom();
 });

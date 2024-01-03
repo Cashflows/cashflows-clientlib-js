@@ -62,7 +62,10 @@
                         <div id="card-live" class="payment-content__body-content">
                             <form id="card-live-form" method="post">
             
+                                <div id="stored-card-list" hidden="hidden"><h2>Select stored card:</h2></div>
+
                                 <div id="card-live-form-fields" class="">
+                                    <h2>Enter card details:</h2>
                                     <div class="form-group">
                                         <label class="form-label" for="card-number">Card Number</label>
                                         <input id="card-number" type="tel" class="form-control required" />
@@ -90,6 +93,10 @@
                                         </div>
                                     </div>
         
+                                    <div class="form-group">
+                                        <input id="store-card-details" type="checkbox" />
+                                        <label class="form-label" for="store-card-details">Store card details</label>
+                                    </div>
                                 </div>
 
                                 <div class="form-submit">
@@ -132,10 +139,10 @@
 
     <script>
         window.onload = function() {
-            var cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d982906345f70e88c35bf360fea90c59fb467c0795ce2b3a6f657c85381a7e27a6f87f8c99086ce86f0a2407990218c3ddf5', true);
+            var cashflows = new Cashflows('a0f157604b0d599dfef371e03bd9d98217c68f4f263b99577a1b16ae5949352ea1e5a172b3d07b4f8831a63f14a9eb5e5aa7c1c8cf258483481cfd2078e1b95b', true);
 
             var inits = [
-                cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card'),
+                cashflows.initCard('#card-number', '#card-name', '#card-expiration', '#card-cvc', '#pay-with-card', '#store-card-details', '#stored-card-list'),
                 cashflows.initApplePay('#apple-pay'),
                 cashflows.initGooglePay('#google-pay')
             ];
