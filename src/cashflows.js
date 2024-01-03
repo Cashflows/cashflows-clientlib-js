@@ -369,7 +369,7 @@ export function Cashflows(intentToken, isIntegration) {
 									self._checkoutPromiseSettlers.resolve(data);
 								}
 								else {
-									self._checkoutPromiseSettlers.reject('Payment failed.');
+									self._checkoutPromiseSettlers.reject(data.lastErrorReport?.errors[0].translatedMessage ?? 'Payment failed.');
 								}
 							}
 						}
