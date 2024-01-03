@@ -88,6 +88,6 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 
 * Added ApplePay support.
 
-### v1.0.44 ###
+### v1.0.44-45 ###
 
 * Added Stored Cards support.
