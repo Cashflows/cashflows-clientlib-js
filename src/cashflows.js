@@ -27,6 +27,7 @@ export function Cashflows(intentToken, isIntegration) {
 	self._applePayElements = null;
 	self._googlePayElements = null;
 	self._payPalElements = null;
+	self._pollTimer = null;
 
 	self._checkoutPromiseSettlers = null; // not null also indicates a checkout has started
 
@@ -437,21 +438,7 @@ export function Cashflows(intentToken, isIntegration) {
 	self._installUpdateEventsListener = () => {
 		window.addEventListener('message', (event) => {
 			if (event.data.event == 'update') {
-				self.getPaymentIntent()
-					.then(data => {
-						if (data && data.paymentStatus) {
-							if (data.paymentStatus != 'Pending') {
-								self._challengeDialog.remove();
-								if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified') {
-									self._checkoutPromiseSettlers.resolve(data);
-								}
-								else {
-									self._checkoutPromiseSettlers.reject(data.lastErrorReport?.errors[0].translatedMessage ?? 'Payment failed.');
-								}
-							}
-						}
-					})
-					.catch(error => self._checkoutPromiseSettlers.reject(error));
+				self._checkPayment();
 			}
 		}, false);
 	};
@@ -477,6 +464,11 @@ export function Cashflows(intentToken, isIntegration) {
 		document.body.insertBefore(backdrop, document.body.firstChild);
 
 		self._challengeDialog = backdrop;
+
+		// Attach event listener that will fetch the latest payment intent status when a new page is loaded in the
+		// challenge dialog. We first allow the page to execute any updates itself before forcing a check of the
+		// intent from outside of the challenge dialog. This is a fail-safe in case the event doesn't arrive.
+		iframe.onload = () => setTimeout(self._checkPayment, 2500);
 	};
 
 	self._apiRequest = (method, endpoint, data = undefined) => {
@@ -502,14 +494,41 @@ export function Cashflows(intentToken, isIntegration) {
 				if (responseData.data.paymentStatus == 'Paid' || responseData.data.paymentStatus == 'Verified') {
 					self._checkoutPromiseSettlers.resolve(responseData.data);
 				}
-				else if (responseData.data.paymentStatus == 'Pending' && responseData.links?.action?.url) {
-					self._openActionLink(responseData.links.action.url);
+				else if (responseData.data.paymentStatus == 'Pending') {
+					// Start polling as an absolute fail-safe when iframe loads and events are not coming through. We need to
+					// remove the timer when we've got a final payment intent status.
+					self._pollTimer = setInterval(self._checkPayment, 5000);
+					if (responseData.links?.action?.url) {
+						self._openActionLink(responseData.links.action.url);
+					}
 				}
 				else {
 					self._checkoutPromiseSettlers.reject('Payment failed.');
 				}
 			})
 			.catch(error => self._checkoutPromiseSettlers.reject(error.message));
+	};
+
+	self._checkPayment = () => {
+		self.getPaymentIntent()
+			.then(data => {
+				if (data && data.paymentStatus) {
+					if (data.paymentStatus != 'Pending') {
+						self._challengeDialog?.remove();
+						clearTimeout(self._pollTimer);
+						if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified') {
+							// With the pollers and events in place, there's a possibility that resolve is called multiple times on
+							// the promise, but those additional calls will have no effect. The then- and catch callbacks are only
+							// called once.
+							self._checkoutPromiseSettlers.resolve(data);
+						}
+						else {
+							self._checkoutPromiseSettlers.reject(data.lastErrorReport?.errors[0].translatedMessage ?? 'Payment failed.');
+						}
+					}
+				}
+			})
+			.catch(error => self._checkoutPromiseSettlers.reject(error));
 	};
 
 	self._log = (message) => {
