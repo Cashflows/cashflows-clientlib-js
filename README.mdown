@@ -88,7 +88,9 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 
 * Added ApplePay support.
 
-### v1.0.44-46 ###
+### v1.0.44-47 ###
 
 * Added Stored Cards support.
 * Improved status change handling.
+* Better handling of GooglePay initialisation failures.
+* Added logging.
