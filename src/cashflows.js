@@ -111,12 +111,27 @@ export function Cashflows(intentToken, isIntegration) {
 								let ulEl = document.createElement("ul");
 								ulEl.classList.add(CASHFLOWS_CLASSNAME_PREFIX + 'card-list');
 
-								// When the inner field is firing a validation event, it means data has been entered and the
-								// radio button should be unchecked.
-								window.addEventListener('message', event => {
+								// When the inner field is firing a validation event, or when the checkbox to store card details is
+								// clicked, the radio button to use a stored card should be deselected.
+								let fDeselect = () => {
 									let inputEl = ulEl.querySelector('input:checked');
 									if (inputEl) {
 										inputEl.checked = false;
+									}
+								};
+								window.addEventListener('message', event => {
+									if (event.data.event == 'validate') {
+										fDeselect();
+									}
+								});
+								cardElements.storeCardDetails.addEventListener('change', _ => {
+									fDeselect();
+									var allValid = Object.keys(self._preparationIds).every(preparationId => self._preparationIds[preparationId].valid);
+									if (allValid) {
+										cardElements.cardSubmit.removeAttribute('disabled');
+									}
+									else {
+										cardElements.cardSubmit.setAttribute('disabled', '');
 									}
 								});
 
@@ -135,6 +150,7 @@ export function Cashflows(intentToken, isIntegration) {
 									inputEl.addEventListener('change', event => {
 										if (inputEl.checked) {
 											cardElements.cardSubmit.removeAttribute('disabled');
+											cardElements.storeCardDetails.checked = false;
 										}
 									});
 
@@ -182,9 +198,9 @@ export function Cashflows(intentToken, isIntegration) {
 				}
 				else {
 					requestData.preparationIds = Object.keys(self._preparationIds);
-				}
-				if (cardElements.storeCardDetails?.checked) {
-					requestData.options = [ 'StoreCardDetails' ];
+					if (cardElements.storeCardDetails?.checked) {
+						requestData.options = [ 'StoreCardDetails' ];
+					}
 				}
 				self._startPayment(requestData);
 			}, true);
@@ -418,7 +434,7 @@ export function Cashflows(intentToken, isIntegration) {
 				self._log('The payment was successful.');
 			})
 			.catch(error => {
-				self._log('The payment was unsuccessful.');
+				self._log('The payment was unsuccessful: ' + error);
 			});
 
 		return self._checkoutPromiseSettlers.promise;

@@ -94,3 +94,7 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 * Improved status change handling.
 * Better handling of GooglePay initialisation failures.
 * Added logging.
+
+### v1.0.48 ###
+
+* Improved ui handling to prevent invalid states.
