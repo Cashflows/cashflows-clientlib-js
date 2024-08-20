@@ -531,7 +531,7 @@ export function Cashflows(intentToken, isIntegration) {
 					if (data.paymentStatus != 'Pending') {
 						self._challengeDialog?.remove();
 						clearTimeout(self._pollTimer);
-						if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified' || (responseData.data.paymentStatus == 'Pending' && responseData.data.lastPaymentStatus == 'Reserved')) {
+						if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified' || (data.paymentStatus == 'Pending' && data.lastPaymentStatus == 'Reserved')) {
 							// With the pollers and events in place, there's a possibility that resolve is called multiple times on
 							// the promise, but those additional calls will have no effect. The then- and catch callbacks are only
 							// called once.
