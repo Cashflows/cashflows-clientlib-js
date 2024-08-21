@@ -528,7 +528,7 @@ export function Cashflows(intentToken, isIntegration) {
 		self.getPaymentIntent()
 			.then(data => {
 				if (data && data.paymentStatus) {
-					if (data.paymentStatus != 'Pending') {
+					if (data.paymentStatus != 'Pending' || (data.paymentStatus == 'Pending' && data.lastPaymentStatus != 'Reserved')) {
 						self._challengeDialog?.remove();
 						clearTimeout(self._pollTimer);
 						if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified' || (data.paymentStatus == 'Pending' && data.lastPaymentStatus == 'Reserved')) {
