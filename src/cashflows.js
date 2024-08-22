@@ -506,7 +506,7 @@ export function Cashflows(intentToken, isIntegration) {
 	self._startPayment = (requestData) => {
 		return self._apiRequest('post', 'api/gateway/payment-intents/' + self._intentToken + '/payments', requestData)
 			.then(responseData => {
-				if (responseData.data.paymentStatus == 'Paid' || responseData.data.paymentStatus == 'Verified') {
+				if (responseData.data.paymentStatus == 'Paid' || responseData.data.paymentStatus == 'Verified' || (responseData.data.paymentStatus == 'Pending' && responseData.data.lastPaymentStatus == 'Reserved')) {
 					self._checkoutPromiseSettlers.resolve(responseData.data);
 				}
 				else if (responseData.data.paymentStatus == 'Pending') {
@@ -528,10 +528,10 @@ export function Cashflows(intentToken, isIntegration) {
 		self.getPaymentIntent()
 			.then(data => {
 				if (data && data.paymentStatus) {
-					if (data.paymentStatus != 'Pending') {
+					if (data.paymentStatus != 'Pending' || (data.paymentStatus == 'Pending' && data.lastPaymentStatus == 'Reserved')) {
 						self._challengeDialog?.remove();
 						clearTimeout(self._pollTimer);
-						if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified') {
+						if (data.paymentStatus == 'Paid' || data.paymentStatus == 'Verified' || (data.paymentStatus == 'Pending' && data.lastPaymentStatus == 'Reserved')) {
 							// With the pollers and events in place, there's a possibility that resolve is called multiple times on
 							// the promise, but those additional calls will have no effect. The then- and catch callbacks are only
 							// called once.
