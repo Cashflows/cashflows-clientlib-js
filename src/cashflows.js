@@ -331,7 +331,7 @@ export function Cashflows(intentToken, isIntegration) {
 
 	// https://developers.google.com/pay/api/web/guides/tutorial#supported-card-networks
 	// customize button: https://developers.google.com/pay/api/web/guides/resources/customize
-	self.initGooglePay = (targetEl, buttonOptions) => {
+	self.initGooglePay = (targetEl, buttonOptions, gatewayMerchantId) => {
 		return new Promise((resolve, reject) => {
 			var googlePayElements = {};
 
@@ -369,14 +369,24 @@ export function Cashflows(intentToken, isIntegration) {
 				script.src = 'https://pay.google.com/gp/p/js/pay.js';
 				document.head.appendChild(script);
 			});
+			
 			loadScriptPromise
 				.then(() => {
 					self._googlePayElements = googlePayElements;
 					self._log('GooglePay was initialised.');
 
+					var merchantIdParameter = '';
+					
+					// If a merchant ID has been provided then we will append
+					// it to the query parameters of the payments page.
+					if (gatewayMerchantId)
+					{
+						merchantIdParameter = '&gatewayMerchantId=' + gatewayMerchantId;
+					}
+
 					// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
 					self._checkoutIntentPromises.push(() =>
-						self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken)
+						self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken + merchantIdParameter)
 							.then(responseData => {
 								self._googlePayElements.paymentData = responseData;
 								self._googlePayElements.client = new google.payments.api.PaymentsClient({environment: self._googlePayElements.paymentData.environment});
