@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 const CASHFLOWS_CLASSNAME_PREFIX = 'cf-';
 const CASHFLOWS_INTEGRATION_ENDPOINT = 'https://gateway-int.cashflows.com/';
 const CASHFLOWS_PRODUCTION_ENDPOINT = 'https://gateway.cashflows.com/';
-const CASHFLOWS_CARD_LIST_ITEM_TEMPLATE = 
+const CASHFLOWS_CARD_LIST_ITEM_TEMPLATE =
 	'<li class="' + CASHFLOWS_CLASSNAME_PREFIX + 'card-list-item">'
 	+ '<input type="radio" name="card-list-item" id="card-list-item-index-{index}" value="{encryptedCardData}" class="' + CASHFLOWS_CLASSNAME_PREFIX + 'card-list-radio">'
 	+ '<label for="card-list-item-index-{index}">'
@@ -199,10 +199,19 @@ export function Cashflows(intentToken, isIntegration) {
 				else {
 					requestData.preparationIds = Object.keys(self._preparationIds);
 					if (cardElements.storeCardDetails?.checked) {
-						requestData.options = [ 'StoreCardDetails' ];
+						requestData.options = ['StoreCardDetails'];
 					}
 				}
-				self._startPayment(requestData);
+
+				// We need to delay starting the payment a little bit to allow for the (last) payment preparation to be processed.
+				// This is to prevent a timing issue where the customer would click the pay button, which would then fire off the
+				// request to send the preparation for the input he/she was typing in. This can cause an issue where payment from
+				// intent is being created before the last preparation was processed. This delay should reduce the time this
+				// occurs or even prevent it from occurring at all.
+				var delayInMilliseconds = 500; // 0.5 second: should probably be enough while not requiring the user to wait too long.
+				setTimeout(function () {
+					self._startPayment(requestData);
+				}, delayInMilliseconds);
 			}, true);
 
 			window.addEventListener("message", event => {
@@ -379,7 +388,7 @@ export function Cashflows(intentToken, isIntegration) {
 						self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken)
 							.then(responseData => {
 								self._googlePayElements.paymentData = responseData;
-								self._googlePayElements.client = new google.payments.api.PaymentsClient({environment: self._googlePayElements.paymentData.environment});
+								self._googlePayElements.client = new google.payments.api.PaymentsClient({ environment: self._googlePayElements.paymentData.environment });
 
 								var partialData = {
 									'apiVersion': responseData.apiVersion,
@@ -499,7 +508,7 @@ export function Cashflows(intentToken, isIntegration) {
 			};
 			axios(request)
 				.then(response => resolve(response.data))
-				.catch(error => reject({ status: error.response?.status, message: error.response?.data?.errorReport?.errors[0]?.message ?? 'Invalid response.'}));
+				.catch(error => reject({ status: error.response?.status, message: error.response?.data?.errorReport?.errors[0]?.message ?? 'Invalid response.' }));
 		});
 	};
 
