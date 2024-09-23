@@ -98,3 +98,8 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 ### v1.0.48 ###
 
 * Improved ui handling to prevent invalid states.
+
+### v1.0.49 ###
+
+* Fixed a bug where creating a payment from intent could result in an **expired** result if not all preparations were processed before the attempt was made.
+* Fixed an issue that could cause a loop when using the library for transactions when auto-capture was turned off.
