@@ -103,3 +103,7 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 
 * Fixed a bug where creating a payment from intent could result in an **expired** result if not all preparations were processed before the attempt was made.
 * Fixed an issue that could cause a loop when using the library for transactions when auto-capture was turned off.
+
+### v1.0.50 ###
+
+* Added a new parameter 'gatewayMerchantId' to the initGooglePay method. This parameter is passed to Google as part of the GooglePay flow.
