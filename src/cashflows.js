@@ -258,7 +258,7 @@ export function Cashflows(intentToken, isIntegration) {
 	};
 
 	// https://developer.apple.com/documentation/apple_pay_on_the_web/applepaysession/
-	self.initApplePay = (targetEl) => {
+	self.initApplePay = (targetEl, requestOrigin, paymentDataOrigin) => {
 		return new Promise((resolve, reject) => {
 			var applePayElements = {};
 
@@ -315,9 +315,26 @@ export function Cashflows(intentToken, isIntegration) {
 
 			self._applePayElements = applePayElements;
 
+			var requestOriginParameter = '';
+			var paymentDataOriginParameter = '';
+
+			// If a request origin has been provided then we will append
+			// it to the query parameters of the payments page.
+			if (requestOrigin)
+			{
+				requestOriginParameter = '&requestOrigin=' + requestOrigin;
+			}
+
+			// If a payment data origin has been provided then we will
+			// append it to the query parameters of the payments page.				
+			if (paymentDataOrigin)
+			{
+				paymentDataOriginParameter = '&paymentDataOrigin=' + paymentDataOrigin;
+			}
+
 			// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
 			self._checkoutIntentPromises.push(() =>
-				self._apiRequest('post', 'payment/apple-pay/get-payment-request?token=' + self._intentToken)
+				self._apiRequest('post', 'payment/apple-pay/get-payment-request?token=' + self._intentToken + requestOriginParameter + paymentDataOriginParameter)
 					.then(responseData => {
 						self._applePayElements.paymentData = responseData;
 						// This method will return false if the domain isn't verified by apple - check this if it continues to return
@@ -340,7 +357,7 @@ export function Cashflows(intentToken, isIntegration) {
 
 	// https://developers.google.com/pay/api/web/guides/tutorial#supported-card-networks
 	// customize button: https://developers.google.com/pay/api/web/guides/resources/customize
-	self.initGooglePay = (targetEl, buttonOptions, gatewayMerchantId) => {
+	self.initGooglePay = (targetEl, buttonOptions, gatewayMerchantId, requestOrigin, paymentDataOrigin) => {
 		return new Promise((resolve, reject) => {
 			var googlePayElements = {};
 
@@ -383,9 +400,11 @@ export function Cashflows(intentToken, isIntegration) {
 				.then(() => {
 					self._googlePayElements = googlePayElements;
 					self._log('GooglePay was initialised.');
-
-					var merchantIdParameter = '';
 					
+					var merchantIdParameter = '';
+					var requestOriginParameter = '';
+					var paymentDataOriginParameter = '';
+
 					// If a merchant ID has been provided then we will append
 					// it to the query parameters of the payments page.
 					if (gatewayMerchantId)
@@ -393,9 +412,23 @@ export function Cashflows(intentToken, isIntegration) {
 						merchantIdParameter = '&gatewayMerchantId=' + gatewayMerchantId;
 					}
 
+					// If a request origin has been provided then we will append
+					// it to the query parameters of the payments page.
+					if (requestOrigin)
+					{
+						requestOriginParameter = '&requestOrigin=' + requestOrigin;
+					}
+
+					// If a payment data origin has been provided then we will
+					// append it to the query parameters of the payments page.				
+					if (paymentDataOrigin)
+					{
+						paymentDataOriginParameter = '&paymentDataOrigin=' + paymentDataOrigin;
+					}
+
 					// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
 					self._checkoutIntentPromises.push(() =>
-						self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken + merchantIdParameter)
+						self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken + merchantIdParameter + requestOriginParameter + paymentDataOriginParameter)
 							.then(responseData => {
 								self._googlePayElements.paymentData = responseData;
 								self._googlePayElements.client = new google.payments.api.PaymentsClient({ environment: self._googlePayElements.paymentData.environment });
