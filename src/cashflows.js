@@ -258,7 +258,7 @@ export function Cashflows(intentToken, isIntegration) {
 	};
 
 	// https://developer.apple.com/documentation/apple_pay_on_the_web/applepaysession/
-	self.initApplePay = (targetEl, paymentDataOrigin) => {
+	self.initApplePay = (targetEl) => {
 		return new Promise((resolve, reject) => {
 			var applePayElements = {};
 
