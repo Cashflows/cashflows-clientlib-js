@@ -317,7 +317,7 @@ export function Cashflows(intentToken, isIntegration) {
 
 			// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
 			self._checkoutIntentPromises.push(() =>
-				self._apiRequest('post', 'payment/apple-pay/get-payment-request?paymentDataOrigin=cashflows-clientlib-js&token=' + self._intentToken)
+				self._apiRequest('post', 'payment/apple-pay/get-payment-request?' + self._intentToken)
 					.then(responseData => {
 						self._applePayElements.paymentData = responseData;
 						// This method will return false if the domain isn't verified by apple - check this if it continues to return
@@ -395,7 +395,7 @@ export function Cashflows(intentToken, isIntegration) {
 
 					// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
 					self._checkoutIntentPromises.push(() =>
-						self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&paymentDataOrigin=cashflows-clientlib-js&token=' + self._intentToken + merchantIdParameter)
+						self._apiRequest('post', 'payment/google-pay/get-payment-data-request?domain=' + encodeURIComponent(window.location.hostname) + '&token=' + self._intentToken + merchantIdParameter)
 							.then(responseData => {
 								self._googlePayElements.paymentData = responseData;
 								self._googlePayElements.client = new google.payments.api.PaymentsClient({ environment: self._googlePayElements.paymentData.environment });
@@ -523,6 +523,9 @@ export function Cashflows(intentToken, isIntegration) {
 	};
 
 	self._startPayment = (requestData) => {
+		// Set the payment origin before sending the request body to the gateway.
+		requestData.PaymentDataOrigin = "cashflows-clientlib-js";
+
 		return self._apiRequest('post', 'api/gateway/payment-intents/' + self._intentToken + '/payments', requestData)
 			.then(responseData => {
 				if (responseData.data.paymentStatus == 'Paid' || responseData.data.paymentStatus == 'Verified' || (responseData.data.paymentStatus == 'Pending' && responseData.data.lastPaymentStatus == 'Reserved')) {
