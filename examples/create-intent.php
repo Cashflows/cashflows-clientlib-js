@@ -31,7 +31,8 @@
             'header' =>
                 "Content-type: application/json\r\n" .
                 "ConfigurationId: {$sConfigurationId}\r\n" .
-            "Hash: {$sHash}\r\n",
+                "Hash: {$sHash}\r\n" .
+                "RequestOrigin: cashflows-clientlib-js",
             'method' => 'POST',
             'content' => $jCreatePaymentIntentRequest
         ]
