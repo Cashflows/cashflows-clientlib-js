@@ -383,7 +383,7 @@ export function Cashflows(intentToken, isIntegration) {
 				.then(() => {
 					self._googlePayElements = googlePayElements;
 					self._log('GooglePay was initialised.');
-					
+
 					var merchantIdParameter = '';
 
 					// If a merchant ID has been provided then we will append
