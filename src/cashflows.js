@@ -340,7 +340,7 @@ export function Cashflows(intentToken, isIntegration) {
 
 	// https://developers.google.com/pay/api/web/guides/tutorial#supported-card-networks
 	// customize button: https://developers.google.com/pay/api/web/guides/resources/customize
-	self.initGooglePay = (targetEl, buttonOptions, gatewayMerchantId) => {
+	self.initGooglePay = (targetEl, buttonOptions, merchantId) => {
 		return new Promise((resolve, reject) => {
 			var googlePayElements = {};
 
@@ -388,9 +388,9 @@ export function Cashflows(intentToken, isIntegration) {
 					
 					// If a merchant ID has been provided then we will append
 					// it to the query parameters of the payments page.
-					if (gatewayMerchantId)
+					if (merchantId)
 					{
-						merchantIdParameter = '&gatewayMerchantId=' + gatewayMerchantId;
+						merchantIdParameter = '&merchantId=' + merchantId;
 					}
 
 					// Only continue when the checkoutIntentPromise resolves and thus intent has been validated.
