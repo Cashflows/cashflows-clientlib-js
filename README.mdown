@@ -107,3 +107,7 @@ contact us at [customer-support@cashflows.com](mailto:customer-support@cashflows
 ### v1.0.50 ###
 
 * Added a new parameter 'gatewayMerchantId' to the initGooglePay method. This parameter is passed to Google as part of the GooglePay flow.
+
+### v1.0.51 ###
+
+* Renamed the 'gatewayMerchantId' parameter to 'merchantId' in the initGooglePay method.
